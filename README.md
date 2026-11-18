@@ -24,9 +24,21 @@ Evaluator reference routes stay on Laptop 1 with the scorer. The prediction pipe
 
 ## Local data and dependencies
 
-The planned local data layout is `data/raw/{train,student_test,eval_test}/<trip_id>/`. Generated candidate tables go in `data/processed/`. Keep these data files local. Use the 80 training trips for fitting and trip-grouped cross-validation, the 10 student-test trips for development comparisons, and the reserved evaluator partition for final evaluation.
+The local data layout is `data/{train,student_test,eval_test}/<trip_id>/` (each trip folder holds `.track`, `.nodes`, `.arcs` and, where supplied, `.route`). Generated candidate tables go in `data/processed/`. Keep these data files local. Use the 80 training trips for fitting and trip-grouped cross-validation, the 10 student-test trips for development comparisons, and the reserved evaluator partition for final evaluation.
 
 Use Python 3.10 or later and install the shared dependencies in a virtual environment with `python -m pip install -r requirements.txt`. Run instructions for the API, UI, and model pipeline will be added as those components land.
+
+### Data pipeline (run from the repo root)
+
+```
+python -m pytest -q                                              # unit tests
+python -m data_processing.inspect_network                        # network sharing/direction check
+python -m data_processing.label_points --splits train student_test   # per-point reference labels + quality CSV
+python -m features.candidate_sweep                               # candidate miss rate for K x radius (train)
+python -m features.make_tables --splits train student_test       # labelled feature tables in data/processed/
+```
+
+Model inputs are `features.build_features.FEATURE_COLUMNS`; the identifier and location columns in `METADATA_COLUMNS` must not be used as model inputs.
 
 ## Submission checklist
 
