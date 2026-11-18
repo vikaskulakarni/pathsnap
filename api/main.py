@@ -34,7 +34,11 @@ app.add_middleware(CORSMiddleware, allow_origins=["*"], allow_methods=["*"], all
 def eval_dir():
     """Folder with the evaluation trips. PATHSNAP_EVAL_SPLIT lets you rehearse locally
     (e.g. student_test) while the real eval_test folder is not available."""
-    return DATA_RAW / os.environ.get("PATHSNAP_EVAL_SPLIT", "eval_test")
+    split = os.environ.get("PATHSNAP_EVAL_SPLIT", "eval_test")
+    p = DATA_RAW / split
+    if not p.is_dir() and split == "eval_test" and (DATA_RAW / "evaluator_test").is_dir():
+        return DATA_RAW / "evaluator_test"
+    return p
 
 
 def list_eval_trips() -> list[str]:
