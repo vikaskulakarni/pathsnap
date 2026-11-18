@@ -1,0 +1,27 @@
+{
+  "seed": 42,
+  "python": "3.13.1",
+  "packages": {
+    "scikit-learn": "1.7.0",
+    "numpy": "2.5.2",
+    "pandas": "3.0.5",
+    "scipy": "1.18.0",
+    "optuna": "5.1.0",
+    "pyarrow": "24.0.0",
+    "joblib": "1.5.3"
+  },
+  "feature_tables": {
+    "train": {
+      "sha256": "a2a2bbd48e1fdd6e503747581435ecdc7f3d58b3388b12f0244c5c273d9f336e",
+      "trips": 80,
+      "observations": 208417,
+      "candidate_rows": 1314688
+    },
+    "student_test": {
+      "sha256": "02d571148ca1a5e399f1bf7e291e80f370e86b38b29f7e0a4e89985cbd23d1dc",
+      "trips": 10,
+      "observations": 19160,
+      "candidate_rows": 122193
+    }
+  }
+}

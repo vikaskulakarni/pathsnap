@@ -25,6 +25,17 @@ def load_train() -> pd.DataFrame:
     return df[~df.trip_id.isin(flagged_train_trips())].reset_index(drop=True)
 
 
+def load_experiment_tables(all_trips: bool):
+    """Choose the labelled development tables and validate the full-partition protocol."""
+    train = load_table("train") if all_trips else load_train()
+    test = load_table("student_test")
+    if all_trips:
+        train_ids, test_ids = set(train.trip_id), set(test.trip_id)
+        if len(train_ids) != 80 or len(test_ids) != 10 or train_ids & test_ids:
+            raise ValueError("Expected 80 training and 10 separate student-test trips.")
+    return train, test
+
+
 def point_top1(df: pd.DataFrame, proba: np.ndarray) -> float:
     """Observation-level Top-1: per GPS point take the highest-scoring candidate and check
     it is the reference arc. Points whose reference arc is not a candidate count as wrong."""

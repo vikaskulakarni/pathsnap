@@ -1,0 +1,6 @@
+model,algorithm_family,configuration,cv_macro_f1,cv_top1,cv_top1_std,cv_log_loss,test_top1,test_macro_f1,test_precision,test_recall,test_log_loss,test_route_continuity,fit_seconds,cv_seconds,infer_ms_per_1k_rows
+hist_gradient_boosting,Boosting,"HistGradientBoosting(max_iter=150, learning_rate=0.1)",0.8889,0.74323,0.17173,0.16502,0.85632,0.91625,0.87433,0.84263,0.10922,0.93577,10.25488,116.71013,2.83753
+random_forest,Ensemble (bagging),"RandomForest(n_estimators=60, max_depth=14, min_samples_leaf=50)",0.88752,0.74259,0.17148,0.15663,0.85611,0.91512,0.89051,0.82362,0.11037,0.93232,79.92435,328.6322,2.17679
+decision_tree,Tree-based,"DecisionTree(max_depth=12, min_samples_leaf=50)",0.87505,0.74123,0.17165,0.19709,0.85157,0.91473,0.8856,0.82686,0.11301,0.93368,23.2431,107.28559,0.13872
+logistic_regression,Linear / probabilistic,StandardScaler + LogisticRegression(C=1.0),0.84802,0.73075,0.16876,0.24168,0.84165,0.89257,0.84286,0.79407,0.1699,0.92606,3.55219,20.42605,0.19638
+gaussian_naive_bayes,Probabilistic (generative),StandardScaler + GaussianNB,0.7881,0.71687,0.16469,0.47554,0.81926,0.7953,0.54412,0.88795,0.48381,0.94219,0.58361,5.62492,0.57381

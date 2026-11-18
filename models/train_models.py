@@ -26,7 +26,7 @@ from sklearn.preprocessing import StandardScaler
 from sklearn.tree import DecisionTreeClassifier
 
 from common.config import ARTIFACTS, FIGURES, RESULTS, SEED
-from models.common import FEATURE_COLUMNS, load_table, load_train, point_top1, row_metrics
+from models.common import FEATURE_COLUMNS, load_experiment_tables, point_top1, row_metrics
 
 N_FOLDS = 5
 
@@ -64,15 +64,19 @@ def connected_share(df: pd.DataFrame, chosen: pd.DataFrame) -> float:
     return conn / pairs
 
 
-def main():
-    train, test = load_train(), load_table("student_test")
+def main(*, all_trips: bool = False):
+    results = RESULTS / 'all80' if all_trips else RESULTS
+    artifacts = ARTIFACTS / 'all80' if all_trips else ARTIFACTS
+    figures = results / 'figures' if all_trips else FIGURES
+
+    train, test = load_experiment_tables(all_trips)
     X, y, groups = train[FEATURE_COLUMNS].to_numpy(float), train.label.to_numpy(), train.trip_id.to_numpy()
     Xt, yt = test[FEATURE_COLUMNS].to_numpy(float), test.label.to_numpy()
     print(f"train: {train.trip_id.nunique()} trips, {len(train):,} rows | "
           f"student_test: {test.trip_id.nunique()} trips, {len(test):,} rows", flush=True)
-    (RESULTS / "oof").mkdir(parents=True, exist_ok=True)
-    (ARTIFACTS / "models").mkdir(parents=True, exist_ok=True)
-    FIGURES.mkdir(parents=True, exist_ok=True)
+    (results / "oof").mkdir(parents=True, exist_ok=True)
+    (artifacts / "models").mkdir(parents=True, exist_ok=True)
+    figures.mkdir(parents=True, exist_ok=True)
     folds = list(GroupKFold(n_splits=N_FOLDS).split(X, y, groups))
 
     rows, test_proba = [], {}
@@ -106,14 +110,14 @@ def main():
                      "test_route_continuity": connected_share(test, chosen_arcs(test, p)),
                      "fit_seconds": fit_secs, "cv_seconds": cv_secs, "infer_ms_per_1k_rows": infer_ms_per_1k})
         pd.DataFrame({"trip_id": train.trip_id, "point_idx": train.point_idx, "arc_id": train.arc_id,
-                      "proba": oof.astype("float32")}).to_parquet(RESULTS / "oof" / f"{name}.parquet", index=False)
-        joblib.dump(final, ARTIFACTS / "models" / f"{name}.joblib")
+                      "proba": oof.astype("float32")}).to_parquet(results / "oof" / f"{name}.parquet", index=False)
+        joblib.dump(final, artifacts / "models" / f"{name}.joblib")
         print(f"{name}: cv_top1={rows[-1]['cv_top1']:.4f} test_top1={rows[-1]['test_top1']:.4f} "
               f"cv_f1={rows[-1]['cv_macro_f1']:.4f} ({cv_secs:.0f}s cv)", flush=True)
 
     df = pd.DataFrame(rows).sort_values("cv_top1", ascending=False)
-    df.round(5).to_csv(RESULTS / "model_comparison.csv", index=False)
-    (ARTIFACTS / "feature_list.json").write_text(json.dumps(FEATURE_COLUMNS, indent=2) + "\n")
+    df.round(5).to_csv(results / "model_comparison.csv", index=False)
+    (artifacts / "feature_list.json").write_text(json.dumps(FEATURE_COLUMNS, indent=2) + "\n")
 
     for col, ttl, fn in (("cv_top1", "CV Top-1 (observation level), GroupKFold by trip", "cv_top1"),
                          ("cv_macro_f1", "CV macro F1 (candidate rows)", "cv_macro_f1"),
@@ -125,14 +129,14 @@ def main():
         ax.set_xlabel(col)
         ax.set_title(ttl)
         fig.tight_layout()
-        fig.savefig(FIGURES / f"model_{fn}.png", dpi=150)
+        fig.savefig(figures / f"model_{fn}.png", dpi=150)
         plt.close(fig)
     best = df.iloc[0].model
     fig, ax = plt.subplots(figsize=(4.5, 4))
     ConfusionMatrixDisplay.from_predictions(yt, (test_proba[best] >= 0.5).astype(int), ax=ax, colorbar=False)
     ax.set_title(f"{best}: student_test candidate rows")
     fig.tight_layout()
-    fig.savefig(FIGURES / "model_confusion_best.png", dpi=150)
+    fig.savefig(figures / "model_confusion_best.png", dpi=150)
     plt.close(fig)
     print("\n" + df[["model", "cv_top1", "cv_macro_f1", "test_top1", "test_macro_f1", "test_log_loss",
                      "test_route_continuity", "fit_seconds"]].round(4).to_string(index=False))
@@ -140,4 +144,7 @@ def main():
 
 
 if __name__ == "__main__":
-    main()
+    import argparse
+    parser = argparse.ArgumentParser(description=__doc__)
+    parser.add_argument("--all-trips", action="store_true", help="Use every training trip and write a separate all80 experiment.")
+    main(all_trips=parser.parse_args().all_trips)

@@ -18,7 +18,7 @@ import numpy as np
 import pandas as pd
 from sklearn.metrics import f1_score
 
-from common.config import FIGURES, RESULTS
+from common.config import ARTIFACTS, FIGURES, RESULTS
 from common.io import list_trips, load_arcs
 from hmm.classifier import load_artifacts, score_candidates
 from hmm.decode import decode_trip
@@ -60,10 +60,13 @@ def ranges(mask: np.ndarray, top: int = 5) -> str:
     return "; ".join(f"{a}-{b}" for _, a, b in sorted(runs, reverse=True)[:top])
 
 
-def main():
+def main(*, all_trips=False):
+    results = RESULTS / 'all80' if all_trips else RESULTS
+    figures = results / 'figures' if all_trips else FIGURES
+    artifacts = ARTIFACTS / 'all80' if all_trips else ARTIFACTS
     params = load_params()
     table = load_table(SPLIT)
-    models = {"model": load_artifacts()[:2], "alt": load_artifacts(alt=True)[:2]}
+    models = {"model": load_artifacts(directory=artifacts)[:2], "alt": load_artifacts(alt=True, directory=artifacts)[:2]}
     method_names = ["nearest_arc", "classifier_only(model)", "classifier_only(alt)", "hmm_distance",
                     "hmm_classifier(model)", "hmm_classifier(alt)"]
     per_trip, failures, secs = [], [], {m: 0.0 for m in method_names}
@@ -105,8 +108,8 @@ def main():
     pt = pd.DataFrame(per_trip)
     # the 3 trips where classifier+HMM (model) loses most Top-1 vs classifier-only (negative = HMM gained)
     fail = pd.DataFrame(failures).sort_values("top1_loss_vs_classifier_only", ascending=False).head(3)
-    fail.round(4).to_csv(RESULTS / "hmm_failures.csv", index=False)
-    pt.round(5).to_csv(RESULTS / "hmm_per_trip.csv", index=False)
+    fail.round(4).to_csv(results / "hmm_failures.csv", index=False)
+    pt.round(5).to_csv(results / "hmm_per_trip.csv", index=False)
 
     rows = []
     for m in method_names:
@@ -121,7 +124,7 @@ def main():
                      "eps_transition_share": (eps[m][0] / eps[m][1]) if eps[m][1] else None,
                      "decode_s_per_trip": secs[m] / len(g), "params": json.dumps(params)})
     res = pd.DataFrame(rows)
-    res.round(5).to_csv(RESULTS / "hmm_results.csv", index=False)
+    res.round(5).to_csv(results / "hmm_results.csv", index=False)
 
     fig, ax = plt.subplots(figsize=(9, 4.2))
     xs = np.arange(len(res))
@@ -134,11 +137,14 @@ def main():
     ax.set_title("student_test: classifier-only vs HMM decoding")
     ax.legend()
     fig.tight_layout()
-    FIGURES.mkdir(parents=True, exist_ok=True)
-    fig.savefig(FIGURES / "hmm_comparison.png", dpi=150)
+    figures.mkdir(parents=True, exist_ok=True)
+    fig.savefig(figures / "hmm_comparison.png", dpi=150)
     plt.close(fig)
     print("\n" + res.drop(columns=["params", "split"]).round(4).to_string(index=False))
 
 
 if __name__ == "__main__":
-    main()
+    import argparse
+    parser = argparse.ArgumentParser(description=__doc__)
+    parser.add_argument("--all-trips", action="store_true")
+    main(all_trips=parser.parse_args().all_trips)

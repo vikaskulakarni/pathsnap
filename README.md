@@ -10,11 +10,13 @@ python -m pip install -r requirements.txt
 python -m pytest -q                              # unit + API/UI-contract tests
 
 # Laptop 1: API (use -Rehearse until data/eval_test/ exists; it serves the student_test trips)
-.\scripts\start_api.ps1 -Rehearse               # http://<laptop-1-ip>:8000  (docs at /docs)
+.\scripts\start_api.ps1 -AllTrips -Rehearse     # http://<laptop-1-ip>:8000  (docs at /docs)
 
 # Laptop 2: UI, pointing at Laptop 1
 .\scripts\start_ui.ps1 -Api http://<laptop-1-ip>:8000    # serves on http://127.0.0.1:8501
 ```
+Laptop 1's launcher prints its LAN API address for each active adapter with a default gateway. If necessary, run `ipconfig` on Laptop 1 and use the Wi-Fi or Ethernet IPv4 address on the network shared by both devices. On Laptop 2, open `http://<laptop-1-ip>:8000/health` to test reachability.
+
 Open the UI, press **Connect & load trips**, pick a trip, press **Reconstruct route**. Every request prints one log line on
 Laptop 1: `time | client | METHOD path | trip | status | n=<points> | acc=<accuracy> | latency`.
 
@@ -45,9 +47,32 @@ Raw data lives in `data/{train,student_test,eval_test}/<trip>/` (`.track`, `.nod
 
 The [technical report](report/PathSnap_Report.pdf) uses the deployed artifacts and active results. [Rehearsal results](report/rehearsal.csv) and the [receiving-server log](report/rehearsal.log) cover all ten student-test trips through the browser on one host. Use scikit-learn 1.7.0 to load the published joblib model.
 
-For the physical demo, start the API on Laptop 1, serve student_test for rehearsal, and run the UI on Laptop 2 with Laptop 1’s actual LAN address. Capture the UI and receiving terminal for the same request. Keep the default eval_test split for the official evaluation. Rebuild the report with `python -m report.build_report`.
+For the final demo use `.\scripts\start_api.ps1 -AllTrips` on Laptop 1. Add `-Rehearse` to serve student_test during rehearsal, and run the UI on Laptop 2 with Laptop 1’s actual LAN address. Capture the UI and receiving terminal for the same request. Place them in the evidence directory as `laptop2-ui.png` and `laptop1-terminal.png`, alongside the local rehearsal images, then build the illustrated submission PDF with `python -m report.build_report --evidence "<evidence-directory>" --output PathSnap_Submission.pdf`. Keep the default eval_test split for the official evaluation. Rebuild the report with `python -m report.build_report`.
 
 The [earlier Phase 1 implementation](https://github.com/vikaskulakarni/pathsnap/tree/4740fb36e2c72e1f7b31edbaa7bf8b08eed1a186) and [Laptop 2 starter experiments](https://github.com/vikaskulakarni/pathsnap/tree/985ee0670ef9dc2b3edb82d3775e3b2d194f6d0a) are preserved for provenance. Use the scripts and experiment tables in this checkout for the submitted system.
+
+## Model operations and requirements evidence
+
+The [requirements audit](report/requirements.md) maps the two deliverables to their evidence: this public repository and the illustrated technical PDF. The organiser documents require traceable experiments and two-laptop deployment. The following checks work without a hosted tracking service.
+
+- `python -m scripts.verify_release` verifies the deployed classifier, alternate classifier, feature order and decoder configuration against SHA-256 digests, checks the fitted schema, and matches the model version to the ten student-test rehearsal records. The API launcher checks the runtime artifacts before serving. The release manifest is `artifacts/release.json`.
+- `results/model_comparison.csv`, `results/optuna_trials.csv`, `artifacts/best_params.json`, and `results/hmm_results.csv` record the demonstrated model's comparative results, search, configuration and decoder evaluation. `report/rehearsal.log` is the matching request log.
+- The supplementary **all-80-trip experiment** retains the seven trips flagged for label quality. Its five-model comparison, trip-grouped Bayesian search on all 80, and decoder comparison are stored separately under `results/all80/`. The reproducible run commands below use the same local development tables; experiment models go under `artifacts/all80/`. Use `.\scripts\start_api.ps1 -Rehearse -AllTrips` to serve the full-partition model; remove `-Rehearse` for the official evaluation. Both releases use the same feature schema, HMM transition configuration and UI contract. The launcher defaults to the previously demonstrated release when `-AllTrips` is omitted.
+- `python -m hmm.decoder_changes` computes aggregate corrections and regressions against the real student-test reference arcs for the demonstrated model.
+- The final receiving-terminal screenshot is collected during the physical demonstration. Use the request's trip ID to pair it with the Laptop 2 screenshot.
+
+From the repository root after generating the development tables:
+
+```powershell
+python -m scripts.experiment_environment
+python -m models.train_models --all-trips
+python -m optimisation.bayes_tune --all-trips
+python -m models.fit_diagnostics
+python -m hmm.evaluate --all-trips
+$env:PATHSNAP_MODEL_RELEASE = 'all80'
+python -m scripts.verify_release --record  # after deliberately retraining the exported model
+python -m scripts.verify_release --runtime-only
+```
 
 ## Reproduce the results
 

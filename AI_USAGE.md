@@ -9,3 +9,5 @@
 ## Consolidated report and integration rehearsal
 
 Codex assembled the report from the active repository result tables, compared them with the deployed artifact configuration, ran browser-to-API predictions on all ten student-test trips, and checked the packaged model with scikit-learn 1.7.0. The integration evidence was collected on one computer. The team is responsible for reviewing the analysis, supplying its physical demonstration evidence, and explaining the results presented.
+
+Codex assisted with the requirements audit, release checks, full-partition experiments and report generation. The full-partition comparison and Optuna records come from real execution on the development trips; the two-device evidence is to be collected by the team.

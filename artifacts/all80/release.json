@@ -1,0 +1,10 @@
+{
+  "scikit_learn": "1.7.0",
+  "files_sha256": {
+    "model.joblib": "b4d7f7a818f3a4ceae2096c781ee7cc9b30497107f0441c8207f1e93c523ce51",
+    "model_alt.joblib": "8f357458088c52a42df01acbc66b08774eba645b3190db1fd5f0ec1d10d21165",
+    "feature_list.json": "736f584a506c32c0fdc533afb6b681869e3d3ebd64c408ddd640fa98355ae16f",
+    "best_params.json": "16620f694d52543750cb27379ba428ead6ce9da24c3c13817b5529efc85f5e4a",
+    "hmm_config.json": "5d34c4c3e2a384032594ea1844977ce227950220d6ec11ad17ccbcba1ac0487c"
+  }
+}

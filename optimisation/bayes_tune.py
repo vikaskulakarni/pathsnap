@@ -1,6 +1,7 @@
 """Bayesian hyperparameter optimisation (Optuna TPE) of the best model from models.train_models.
 
-Search: TPE on a seeded half of the train trips, 3-fold GroupKFold by trip, objective =
+Search: TPE on 36 quality-screened trips by default or all 80 with --all-trips.
+Three-fold GroupKFold by trip, objective =
 mean observation-level Top-1. The best configuration is then refit on all train trips and
 compared with the untuned model on the SAME 5 trip-grouped folds and on student_test.
 The final model is chosen by cross-validation, not by student_test.
@@ -24,7 +25,7 @@ from sklearn.ensemble import HistGradientBoostingClassifier, RandomForestClassif
 from sklearn.model_selection import GroupKFold
 
 from common.config import ARTIFACTS, FIGURES, RESULTS, SEED
-from models.common import FEATURE_COLUMNS, chosen_arcs, load_table, load_train, point_top1, row_metrics
+from models.common import FEATURE_COLUMNS, chosen_arcs, load_experiment_tables, point_top1, row_metrics
 from models.train_models import N_FOLDS, connected_share
 
 N_TRIALS = 20
@@ -64,17 +65,22 @@ def cv_eval(name, params, train, X, y, groups):
     return oof, {"cv_top1": np.mean(top1), "cv_macro_f1": np.mean(f1), "cv_log_loss": np.mean(ll)}
 
 
-def main():
-    comp = pd.read_csv(RESULTS / "model_comparison.csv")
+def main(*, all_trips: bool = False):
+    results = RESULTS / 'all80' if all_trips else RESULTS
+    artifacts = ARTIFACTS / 'all80' if all_trips else ARTIFACTS
+    figures = results / 'figures' if all_trips else FIGURES
+
+    comp = pd.read_csv(results / "model_comparison.csv")
     tunable = comp[comp.model.isin(["hist_gradient_boosting", "random_forest"])].sort_values("cv_top1", ascending=False)
     name = tunable.iloc[0].model
     print(f"best overall: {comp.sort_values('cv_top1', ascending=False).iloc[0].model}; tuning: {name}", flush=True)
-    train, test = load_train(), load_table("student_test")
+    train, test = load_experiment_tables(all_trips)
     X, y, groups = train[FEATURE_COLUMNS].to_numpy(float), train.label.to_numpy(), train.trip_id.to_numpy()
 
+    trial_budget = 10 if all_trips else N_TRIALS
     rng = np.random.RandomState(SEED)
     trips = sorted(train.trip_id.unique())
-    keep = set(rng.choice(trips, size=min(SEARCH_TRIPS, len(trips)), replace=False))
+    keep = set(rng.choice(trips, size=len(trips) if all_trips else min(SEARCH_TRIPS, len(trips)), replace=False))
     m = train.trip_id.isin(keep).to_numpy()
     sub, Xs, ys, gs = train[m].reset_index(drop=True), X[m], y[m], groups[m]
     search_folds = list(GroupKFold(n_splits=SEARCH_FOLDS).split(Xs, ys, gs))
@@ -88,11 +94,15 @@ def main():
         return float(np.mean(scores))
 
     t0 = time.perf_counter()
-    study = optuna.create_study(direction="maximize", sampler=optuna.samplers.TPESampler(seed=SEED))
+    study = optuna.create_study(direction="maximize", sampler=optuna.samplers.TPESampler(seed=SEED, n_startup_trials=3 if all_trips else 10))
     optuna.logging.set_verbosity(optuna.logging.WARNING)
-    study.optimize(objective, n_trials=N_TRIALS)
+    def save_trial(study, trial):
+        study.trials_dataframe().to_csv(results / 'optuna_trials.csv', index=False)
+        print(f'Trial {trial.number + 1}/{trial_budget}: {trial.value}', flush=True)
+
+    study.optimize(objective, n_trials=trial_budget, callbacks=[save_trial])
     search_secs = time.perf_counter() - t0
-    study.trials_dataframe().to_csv(RESULTS / "optuna_trials.csv", index=False)
+    study.trials_dataframe().to_csv(results / "optuna_trials.csv", index=False)
     best = study.best_params
     print(f"search done in {search_secs:.0f}s, best objective {study.best_value:.4f}: {best}", flush=True)
 
@@ -105,8 +115,8 @@ def main():
     ax.set_title(f"Optuna TPE search: {name}")
     ax.legend()
     fig.tight_layout()
-    FIGURES.mkdir(parents=True, exist_ok=True)
-    fig.savefig(FIGURES / "optuna_history.png", dpi=150)
+    figures.mkdir(parents=True, exist_ok=True)
+    fig.savefig(figures / "optuna_history.png", dpi=150)
     plt.close(fig)
 
     untuned_row = comp[comp.model == name].iloc[0]
@@ -132,30 +142,35 @@ def main():
                "infer_ms_per_1k_rows": untuned_row.infer_ms_per_1k_rows}
     cmp = pd.DataFrame([untuned, tuned_row])
     cmp.insert(0, "model", name)
-    cmp.round(5).to_csv(RESULTS / "tuning_comparison.csv", index=False)
+    cmp.round(5).to_csv(results / "tuning_comparison.csv", index=False)
     print(cmp.round(4).to_string(index=False), flush=True)
 
     pd.DataFrame({"trip_id": train.trip_id, "point_idx": train.point_idx, "arc_id": train.arc_id,
-                  "proba": oof.astype("float32")}).to_parquet(RESULTS / "oof" / f"{name}_tuned.parquet", index=False)
-    joblib.dump(tuned, ARTIFACTS / "models" / f"{name}_tuned.joblib")
+                  "proba": oof.astype("float32")}).to_parquet(results / "oof" / f"{name}_tuned.parquet", index=False)
+    joblib.dump(tuned, artifacts / "models" / f"{name}_tuned.joblib")
 
     # final selection by cross-validation (never by student_test)
     use_tuned = tuned_row["cv_top1"] > untuned["cv_top1"]
     chosen = f"{name}_tuned" if use_tuned else name
-    shutil.copy(ARTIFACTS / "models" / f"{chosen}.joblib", ARTIFACTS / "model.joblib")
+    shutil.copy(artifacts / "models" / f"{chosen}.joblib", artifacts / "model.joblib")
     alt = comp[comp.model != name].sort_values("cv_top1", ascending=False).iloc[0].model
-    shutil.copy(ARTIFACTS / "models" / f"{alt}.joblib", ARTIFACTS / "model_alt.joblib")
+    shutil.copy(artifacts / "models" / f"{alt}.joblib", artifacts / "model_alt.joblib")
     record = {"model": name, "tuned": bool(use_tuned), "selected_file": chosen, "alt_model": alt,
               "best_params": best, "untuned_params": {k: v for k, v in untuned_params.items()
                                                       if k in best},
-              "search": {"sampler": "TPE", "n_trials": N_TRIALS, "folds": SEARCH_FOLDS,
+              "search": {"sampler": "TPE", "n_trials": trial_budget, "folds": SEARCH_FOLDS,
                          "trips": len(keep), "objective": "mean observation-level Top-1",
                          "best_objective": study.best_value, "seconds": search_secs, "seed": SEED}}
-    (ARTIFACTS / "best_params.json").write_text(json.dumps(record, indent=2) + "\n")
+    if all_trips:
+        (results / "run.json").write_text(json.dumps(record, indent=2) + "\n")
+    (artifacts / "best_params.json").write_text(json.dumps(record, indent=2) + "\n")
     version = hashlib.sha1(json.dumps(record, sort_keys=True).encode()).hexdigest()[:8]
     print(f"\nselected: {chosen} (tuned CV Top-1 {tuned_row['cv_top1']:.4f} vs untuned {untuned['cv_top1']:.4f}); "
           f"alt: {alt}; version {version}")
 
 
 if __name__ == "__main__":
-    main()
+    import argparse
+    parser = argparse.ArgumentParser(description=__doc__)
+    parser.add_argument("--all-trips", action="store_true", help="Use every training trip and write a separate all80 experiment.")
+    main(all_trips=parser.parse_args().all_trips)

@@ -39,3 +39,6 @@ FIRST_ROUND_EVALUATION_CHEAT_SHEET.pdf
 # Reproducible model outputs
 results/oof/
 artifacts/models/
+/artifacts/all80/models/
+/results/all80/oof/
+/results/all80/hmm_failures.csv
