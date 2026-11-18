@@ -9,19 +9,24 @@ PathSnap is a machine learning hackathon project for matching noisy GPS observat
 
 Evaluator reference routes stay on Laptop 1 with the scorer. The prediction pipeline receives GPS observations and road-network data. The UI receives predictions and aggregate results.
 
-## Planned repository layout
+## Repository layout
 
-- `api/` for FastAPI endpoints, model loading, and live scoring.
-- `ui/` for the evaluator trip picker, map, and results.
-- `ml/` for data inspection, preprocessing, features, training, evaluation, Bayesian search, and route decoding.
-- `artifacts/` for the final model weights and inference configuration.
-- `visualizations/` for Folium map generation and experiment plots.
-- `results/` for reproducible experiment logs, configurations, and summaries.
-- `docs/` for the API contract and deployment details.
+- `common/`, `data_processing/`, `features/`, `hmm/`, and `api/` are Laptop 1's shared utilities, trip processing, candidate features, route decoding, and FastAPI service.
+- `models/`, `optimisation/`, `ui/`, `notebooks/`, and `visualisations/` are Laptop 2's training, tuning, Streamlit UI, exploration, and Folium map code.
+- `artifacts/` holds the final model and inference configuration. `results/` holds reproducible metrics, EDA outputs, and figures. `report/` holds the technical report and screenshots.
+- `tests/` holds checks for both laptops.
 
-## Setup status
+## Branches
 
-This is the initial repository. Installation, execution, and deployment commands will be added as the implementation lands. Keep the supplied raw trip files local. Use the 80 training trips for fitting and trip-grouped cross-validation, the 10 student-test trips for development comparisons, and the reserved evaluator partition only for final evaluation.
+- `main` is the shared integration branch.
+- Laptop 1 starts on `feat/setup`.
+- Laptop 2 starts on `feat/train-utils`.
+
+## Local data and dependencies
+
+The planned local data layout is `data/raw/{train,student_test,eval_test}/<trip_id>/`. Generated candidate tables go in `data/processed/`. Keep these data files local. Use the 80 training trips for fitting and trip-grouped cross-validation, the 10 student-test trips for development comparisons, and the reserved evaluator partition for final evaluation.
+
+Use Python 3.10 or later and install the shared dependencies in a virtual environment with `python -m pip install -r requirements.txt`. Run instructions for the API, UI, and model pipeline will be added as those components land.
 
 ## Submission checklist
 
