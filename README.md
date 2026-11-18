@@ -16,10 +16,10 @@ UE24CS352A · Machine Learning · PES University
 
 | # | SRN | Name |
 |---|-----|------|
-| 1 | `<SRN>` | `<NAME>` |
-| 2 | `<SRN>` | `<NAME>` |
-| 3 | `<SRN>` | `<NAME>` |
-| 4 | `<SRN>` | `<NAME>` |
+| 1 | PES2UG24CS474 | Shivansh Sharma |
+| 2 | PES2UG24CS478| Shreelakshmi G Bhat |
+| 3 | PES2UG24CS922 | Vikas Kulakarni |
+| 4 | PES2UG24CS455 | Sham Santhosh S  |
 
 ---
 
