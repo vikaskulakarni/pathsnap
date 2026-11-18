@@ -24,7 +24,7 @@ Evaluator reference routes stay on Laptop 1 with the scorer. The prediction pipe
 
 ## Local data and dependencies
 
-The planned local data layout is `data/raw/{train,student_test,eval_test}/<trip_id>/`. Generated candidate tables go in `data/processed/`. Keep these data files local. Use the 80 training trips for fitting and trip-grouped cross-validation, the 10 student-test trips for development comparisons, and the reserved evaluator partition for final evaluation.
+The shared loaders default to `data/{train,student_test,eval_test}/<trip_id>/`. Generated candidate tables go in `data/processed/`. Keep these data files local. Use the 80 training trips for fitting and trip-grouped cross-validation, the 10 student-test trips for development comparisons, and the reserved evaluator partition for final evaluation.
 
 Use Python 3.10 or later and install the shared dependencies in a virtual environment with `python -m pip install -r requirements.txt`.
 
@@ -42,7 +42,7 @@ Select a trip from `GET /trips` and click **Predict**. The UI sends its ID to `P
 
 ## Reproduce the Laptop 2 analysis
 
-After the Laptop 1 shared loaders land, use the student dataset directory as `--data-root` if it differs from Laptop 1's configured location:
+Use the student dataset directory as `--data-root` if it differs from the shared loader default:
 
 ```text
 python -m pytest -q
