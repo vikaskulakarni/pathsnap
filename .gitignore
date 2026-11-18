@@ -35,3 +35,7 @@ Thumbs.db
 
 FIRST_ROUND_EVALUATION_CHEAT_SHEET.pdf
 
+
+# Reproducible model outputs
+results/oof/
+artifacts/models/

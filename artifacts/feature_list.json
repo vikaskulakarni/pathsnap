@@ -1,0 +1,14 @@
+[
+  "dist_m",
+  "dist_rank",
+  "dist_minus_min",
+  "heading_diff",
+  "speed_mps",
+  "dt_s",
+  "arc_len_m",
+  "proj_t",
+  "fallback",
+  "low_speed",
+  "has_twin",
+  "connects_prev_best"
+]

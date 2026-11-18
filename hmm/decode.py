@@ -1,12 +1,12 @@
 import numpy as np
 import pandas as pd
 
-from hmm.emission import distance_logp, heading_logp
+from hmm.emission import classifier_logp, distance_logp, heading_logp
 from hmm.road_graph import RoadGraph
 from hmm.transition import transition_matrix
 from hmm.viterbi import viterbi
 
-EMISSIONS = ("distance", "distance+heading")
+EMISSIONS = ("distance", "distance+heading", "classifier")
 
 
 def decode_trip(features_df: pd.DataFrame, params: dict, graph: RoadGraph,
@@ -29,7 +29,10 @@ def decode_trip(features_df: pd.DataFrame, params: dict, graph: RoadGraph,
         n_points = int(features_df.point_idx.max()) + 1 if len(features_df) else 0
     ids, arcs, emis, times = [], [], [], []
     for pid, g in features_df.groupby("point_idx", sort=True):
-        e = distance_logp(g.dist_m.to_numpy(), params["sigma_m"])
+        if emission == "classifier":  # needs a `proba` column from the classifier
+            e = classifier_logp(g.proba.to_numpy(), g.dist_m.to_numpy(), params["w"], params["sigma_m"])
+        else:
+            e = distance_logp(g.dist_m.to_numpy(), params["sigma_m"])
         if emission == "distance+heading":
             e = e + params["heading_weight"] * heading_logp(g.heading_diff.to_numpy(),
                                                             params["heading_sigma_deg"])

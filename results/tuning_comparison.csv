@@ -1,0 +1,3 @@
+model,configuration,cv_top1,cv_macro_f1,cv_log_loss,test_top1,test_macro_f1,test_log_loss,test_route_continuity,fit_seconds,infer_ms_per_1k_rows
+hist_gradient_boosting,untuned,0.87187,0.92352,0.10849,0.85637,0.91535,0.11131,0.93352,4.18947,1.20349
+hist_gradient_boosting,tuned (Optuna TPE),0.87253,0.92195,0.11513,0.856,0.91553,0.11738,0.93379,4.42013,1.35629
