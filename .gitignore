@@ -1,8 +1,12 @@
 # Raw GPS and road-network data
-/data/
+/data/*
+!/data/processed/
+/data/processed/*
+!/data/processed/.gitkeep
 /train/
 /student_test/
 /evaluator_test/
+/eval_test/
 **/Student folder/
 *.track
 *.nodes
@@ -26,3 +30,5 @@ node_modules/
 dist/
 .DS_Store
 Thumbs.db
+/artifacts/candidates/
+/notes/
