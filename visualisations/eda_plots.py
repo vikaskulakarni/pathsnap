@@ -228,7 +228,7 @@ def analyse_split(
 
 
 def run_eda(data_root: Path | None = None, results_dir: Path = ROOT / "results") -> None:
-    figure_dir = results_dir / "figures"
+    figure_dir = results_dir / "eda" / "figures"
     table_dir = results_dir / "eda"
     figure_dir.mkdir(parents=True, exist_ok=True)
     table_dir.mkdir(parents=True, exist_ok=True)
