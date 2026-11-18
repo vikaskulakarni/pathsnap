@@ -1,6 +1,6 @@
 import numpy as np
 
-from data_processing.label_points import label_points
+from data_processing.label_points import label_trip as label_points
 
 STEP = 0.001  # ~73 m of longitude at lat 49
 
