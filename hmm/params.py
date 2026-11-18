@@ -8,6 +8,7 @@ from common.config import ARTIFACTS
 CONFIG_PATH = ARTIFACTS / "hmm_config.json"
 
 DEFAULT_PARAMS = {
+    "w": 0.5,                  # emission: weight of the classifier log-prob vs the distance term
     "sigma_m": 8.0,            # emission: GPS noise std in metres
     "heading_sigma_deg": 45.0,  # emission: std of the heading mismatch (heading variant only)
     "heading_weight": 1.0,      # emission: weight of the heading term (heading variant only)

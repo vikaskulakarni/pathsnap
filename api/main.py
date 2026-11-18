@@ -1,25 +1,33 @@
-"""PathSnap API (stage 5: dummy nearest-arc predictor; the real pipeline comes later).
+"""PathSnap API: real pipeline (classifier + HMM/Viterbi) with server-side accuracy.
 
 Run: uvicorn api.main:app --host 0.0.0.0 --port 8000
-This module never reads a .route file.
+Prediction never reads a .route file. Only api/evaluation.py reads the reference route,
+after the prediction exists, and only two numbers are returned.
 """
 import os
 import time
+from contextlib import asynccontextmanager
 from datetime import datetime
 
-import numpy as np
 from fastapi import FastAPI, HTTPException, Request
 from fastapi.middleware.cors import CORSMiddleware
 
+from api.evaluation import evaluate
 from api.schemas import PointPrediction, PredictRequest, PredictResponse
 from common.config import DATA_RAW
-from common.geo import make_projector, to_metres
-from common.io import load_arcs, load_nodes, load_track
-from features.candidates import build_arc_index, get_candidates
+from hmm.pipeline import Predictor
 
-MODEL_VERSION = "dummy-nearest"
+STATE: dict = {}
 
-app = FastAPI(title="PathSnap API")
+
+@asynccontextmanager
+async def lifespan(app: FastAPI):
+    STATE["predictor"] = Predictor()  # model, feature list and decoder config loaded once
+    yield
+    STATE.clear()
+
+
+app = FastAPI(title="PathSnap API", lifespan=lifespan)
 app.add_middleware(CORSMiddleware, allow_origins=["*"], allow_methods=["*"], allow_headers=["*"])
 
 
@@ -44,10 +52,13 @@ async def log_requests(request: Request, call_next):
         return response
     finally:
         ms = (time.perf_counter() - start) * 1000
-        trip = getattr(request.state, "trip_id", "-")
+        s = request.state
+        n = getattr(s, "n_points", "-")
+        acc = getattr(s, "accuracy", None)
+        acc = f"{acc:.3f}" if isinstance(acc, float) else "-"
         client = request.client.host if request.client else "-"
         print(f"{datetime.now():%H:%M:%S} | {client} | {request.method} {request.url.path} "
-              f"| {trip} | {status} | {ms:.0f} ms", flush=True)
+              f"| {getattr(s, 'trip_id', '-')} | {status} | n={n} | acc={acc} | {ms:.0f} ms", flush=True)
 
 
 @app.get("/health")
@@ -60,34 +71,21 @@ def trips():
     return list_eval_trips()
 
 
-def _dummy_predict(trip_dir):
-    """Nearest arc per GPS point; route line from those arcs' node coordinates."""
-    track, nodes, arcs = load_track(trip_dir), load_nodes(trip_dir), load_arcs(trip_dir)
-    tr = make_projector(nodes.lon.to_numpy(), nodes.lat.to_numpy())
-    nx, ny = to_metres(tr, nodes.lon, nodes.lat)
-    px, py = to_metres(tr, track.lon, track.lat)
-    index = build_arc_index(np.column_stack([nx, ny]), arcs)
-    cand = get_candidates(np.column_stack([px, py]), index, k=1)
-    nearest = cand.drop_duplicates("point_idx").set_index("point_idx").arc_id.reindex(
-        np.arange(len(track))).to_numpy()
-    points = [PointPrediction(point_idx=i, lon=float(track.lon[i]), lat=float(track.lat[i]),
-                              arc_id=int(a)) for i, a in enumerate(nearest)]
-    keep = np.concatenate([[True], nearest[1:] != nearest[:-1]])  # collapse repeated arcs
-    seq = nearest[keep]
-    fn, tn = arcs.from_node.to_numpy(), arcs.to_node.to_numpy()
-    coords = [[float(nodes.lon[fn[a]]), float(nodes.lat[fn[a]])] for a in seq]
-    coords.append([float(nodes.lon[tn[seq[-1]]]), float(nodes.lat[tn[seq[-1]]])])
-    return points, coords
-
-
 @app.post("/predict", response_model=PredictResponse)
 def predict(req: PredictRequest, request: Request):
     request.state.trip_id = req.trip_id
     if req.trip_id not in list_eval_trips():
         raise HTTPException(status_code=404, detail=f"unknown trip_id: {req.trip_id}")
+    trip_dir = eval_dir() / req.trip_id
+    predictor: Predictor = STATE["predictor"]
     start = time.perf_counter()
-    points, coords = _dummy_predict(eval_dir() / req.trip_id)
-    return PredictResponse(trip_id=req.trip_id, n_points=len(points), points=points,
-                           route_coords=coords, accuracy=None, route_continuity=None,
-                           latency_ms=(time.perf_counter() - start) * 1000,
-                           model_version=MODEL_VERSION)
+    result = predictor.predict_trip(trip_dir)          # 1. predict (no labels involved)
+    latency_ms = (time.perf_counter() - start) * 1000
+    scores = evaluate(trip_dir, [p["arc_id"] for p in result["points"]])  # 2. score afterwards
+    request.state.n_points = len(result["points"])
+    request.state.accuracy = scores["accuracy"]
+    return PredictResponse(trip_id=req.trip_id, n_points=len(result["points"]),
+                           points=[PointPrediction(**p) for p in result["points"]],
+                           route_coords=result["route_coords"], accuracy=scores["accuracy"],
+                           route_continuity=scores["route_continuity"], latency_ms=latency_ms,
+                           model_version=predictor.version)
