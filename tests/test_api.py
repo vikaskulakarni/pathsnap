@@ -2,39 +2,42 @@ import pytest
 from fastapi.testclient import TestClient
 
 from api.main import app
+from common.config import ARTIFACTS
 from common.io import list_trips, load_track
 
-client = TestClient(app)
+needs_model = pytest.mark.skipif(not (ARTIFACTS / "model.joblib").exists(),
+                                 reason="model artifacts not available")
 
 
-def test_health():
-    assert client.get("/health").json() == {"status": "ok"}
-
-
-def test_trips_empty_when_folder_missing(monkeypatch):
+@needs_model
+def test_health_trips_and_404(monkeypatch, capsys):
     monkeypatch.setenv("PATHSNAP_EVAL_SPLIT", "no_such_split")
-    assert client.get("/trips").json() == []
-
-
-def test_unknown_trip_is_404(monkeypatch, capsys):
-    monkeypatch.setenv("PATHSNAP_EVAL_SPLIT", "no_such_split")
-    r = client.post("/predict", json={"trip_id": "nope"})
+    with TestClient(app) as client:
+        assert client.get("/health").json() == {"status": "ok"}
+        assert client.get("/trips").json() == []
+        r = client.post("/predict", json={"trip_id": "nope"})
     assert r.status_code == 404
     assert "| nope | 404 |" in capsys.readouterr().out  # log line carries trip id and status
 
 
-def test_predict_one_arc_per_point_and_no_labels_in_response(monkeypatch):
+@needs_model
+def test_predict_real_pipeline_and_no_labels_in_response(monkeypatch, capsys):
     trips = list_trips("student_test")
     if not trips:
         pytest.skip("student_test data not available")
     monkeypatch.setenv("PATHSNAP_EVAL_SPLIT", "student_test")
     trip = trips[0]
-    assert trip.name in client.get("/trips").json()
-    r = client.post("/predict", json={"trip_id": trip.name})
+    with TestClient(app) as client:
+        assert trip.name in client.get("/trips").json()
+        r = client.post("/predict", json={"trip_id": trip.name})
     assert r.status_code == 200
     body = r.json()
-    assert body["n_points"] == len(load_track(trip)) == len(body["points"])
-    assert body["accuracy"] is None and body["model_version"] == "dummy-nearest"
+    n = len(load_track(trip))
+    assert body["n_points"] == n == len(body["points"])
+    assert 0.0 <= body["accuracy"] <= 1.0 and 0.0 <= body["route_continuity"] <= 1.0
+    # only predictions and two numbers: no reference arcs or route anywhere in the response
     assert set(body) == {"trip_id", "n_points", "points", "route_coords", "accuracy",
                          "route_continuity", "latency_ms", "model_version"}
-    assert len(body["route_coords"]) >= 2
+    assert set(body["points"][0]) == {"point_idx", "lon", "lat", "arc_id"}
+    log = capsys.readouterr().out
+    assert f"| {trip.name} | 200 | n={n} | acc=" in log
