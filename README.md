@@ -12,7 +12,7 @@ Evaluator reference routes stay on Laptop 1 with the scorer. The prediction pipe
 ## Repository layout
 
 - `common/`, `data_processing/`, `features/`, `hmm/`, and `api/` are Laptop 1's shared utilities, trip processing, candidate features, route decoding, and FastAPI service.
-- `models/`, `optimisation/`, `ui/`, `notebooks/`, and `visualisations/` are Laptop 2's training, tuning, Streamlit UI, exploration, and Folium map code.
+- `models/`, `optimisation/`, `ui/`, `notebooks/`, and `visualisations/` are Laptop 2's training, tuning, web UI, exploration, and Folium map code.
 - `artifacts/` holds the final model and inference configuration. `results/` holds reproducible metrics, EDA outputs, and figures. `report/` holds the technical report and screenshots.
 - `tests/` holds checks for both laptops.
 
@@ -30,15 +30,15 @@ Use Python 3.10 or later and install the shared dependencies in a virtual enviro
 
 ## Run the UI on Laptop 2
 
-From the repository root, run:
+From the repository root, run `python -m ui.app` and open `http://127.0.0.1:8501`. The UI uses the Python standard library to serve its HTML, CSS, and JavaScript. It works without an internet connection or a map-service key. The Folium tools remain available for the report maps.
 
-```text
-python -m streamlit run ui/app.py
-```
+Enter Laptop 1's FastAPI address (for example `http://<laptop-1-ip>:8000`) and choose **Connect & load trips**. The default address can be set with `PATHSNAP_API_URL`. Laptop 1 must allow browser requests from the UI origin, including the POST preflight. Both laptops must be on a reachable network.
 
-In the sidebar, enter Laptop 1's API address in the form `http://<laptop-1-ip>:8000` and click **Check connection**. The default is `http://localhost:8000`, or the value of `PATHSNAP_API_URL` if set. Both laptops need to be on the same reachable network and Laptop 1 must be serving FastAPI.
+Select an API-provided trip and choose **Reconstruct route**. Use the layer controls, drag to pan, or use the zoom and fit buttons to inspect GPS observations and the predicted route. Scores are displayed as percentages and missing scores appear as unavailable. The API response is available below the results.
 
-Select a trip from `GET /trips` and click **Predict**. The UI sends its ID to `POST /predict`, then draws the GPS observations and predicted route and shows the server's scores. Use **Refresh trips** if the server's trip list changes.
+### Hosting options
+
+Use the local server for the two-laptop evaluation. For a separate hosted preview, the three static assets in `ui/` can also be served by [GitHub Pages](https://docs.github.com/en/pages/getting-started-with-github-pages/what-is-github-pages) or [Cloudflare Pages](https://developers.cloudflare.com/pages/framework-guides/deploy-anything/). A hosted interface needs an API reachable from the evaluator's browser, an allowed origin, and a compatible HTTPS setup. Public hosting is optional.
 
 ## Reproduce the Laptop 2 analysis
 

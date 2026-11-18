@@ -13,8 +13,6 @@ folium
 fastapi
 uvicorn
 pydantic
-streamlit
-streamlit-folium
 requests
 joblib
 pytest
