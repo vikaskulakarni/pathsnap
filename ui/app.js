@@ -127,37 +127,49 @@ function adjust(mult) {if (geometry) {zoom=Math.min(64,Math.max(.25,zoom*mult));
 function draw() {
   const w=canvas.clientWidth,h=canvas.clientHeight,dpr=window.devicePixelRatio || 1;
   canvas.width=Math.round(w*dpr);canvas.height=Math.round(h*dpr);ctx.scale(dpr,dpr);
-  ctx.fillStyle='#102e2d';ctx.fillRect(0,0,w,h);
-  ctx.lineWidth=1;ctx.strokeStyle='#20403b';ctx.beginPath();
+  ctx.fillStyle='#100f1d';ctx.fillRect(0,0,w,h);
+  ctx.lineWidth=1;ctx.strokeStyle='#211e33';ctx.beginPath();
   for(let x=0;x<w;x+=40){ctx.moveTo(x,0);ctx.lineTo(x,h);}
   for(let y=0;y<h;y+=40){ctx.moveTo(0,y);ctx.lineTo(w,y);}ctx.stroke();
   for(const id of ['plus','minus','fit','gps','route']) el(id).disabled=!geometry;
   if(!geometry) {
-    // Abstract contour illustration for the idle view.
-    if(result) return;
-    ctx.save();ctx.scale(w/900,h/400);ctx.lineWidth=1.2;
-    for(const [cx,cy,sx,sy] of [[25,330,1.4,1],[880,22,1.55,.95]]) {
-      for(let k=1;k<35;k++) {
-        ctx.beginPath();
-        for(let j=0;j<=180;j++) {
-          const a=j*Math.PI/90;
-          const r=k*8*(1+.16*Math.sin(3*a+.022*k)+.09*Math.cos(5*a-.018*k));
-          const x=cx+sx*r*Math.cos(a), y=cy+sy*r*Math.sin(a);
-          if(j)ctx.lineTo(x,y);else ctx.moveTo(x,y);
-        }
-        ctx.strokeStyle=k%5===0?'#497768':'#2b554c';ctx.stroke();
+    if (result) return;
+    // An illustrative relief surface occupies the idle map. Real trips use the projection below.
+    ctx.save();
+    ctx.scale(w / 1000, h / 460);
+    const glow = ctx.createRadialGradient(630, 195, 12, 630, 195, 490);
+    glow.addColorStop(0, '#322843'); glow.addColorStop(1, '#11101c');
+    ctx.fillStyle = glow; ctx.fillRect(0, 0, 1000, 460);
+    function elevation(x, y) {
+      const ridge = x - (570 + 100 * Math.sin(y / 89) - .28 * y);
+      const peak = Math.exp(-ridge * ridge / 36000) * (132 + 43 * Math.cos(y / 65));
+      return peak + 32 * Math.sin(x / 99 + y / 59) + 16 * Math.cos(x / 53 - y / 101);
+    }
+    for (let y = -70; y < 620; y += 6) {
+      ctx.beginPath();
+      for (let x = -15; x <= 1020; x += 4) {
+        const py = y - elevation(x, y);
+        if (x === -15) ctx.moveTo(x, py); else ctx.lineTo(x, py);
       }
-    }ctx.restore();return;
+      ctx.lineTo(1020, 650); ctx.lineTo(-15, 650); ctx.closePath();
+      ctx.fillStyle = '#171424'; ctx.fill();
+      const ink = ctx.createLinearGradient(0, 0, 1000, 0);
+      ink.addColorStop(0, '#211d33'); ink.addColorStop(.28, '#584576');
+      ink.addColorStop(.53, '#a68bcc'); ink.addColorStop(.67, '#dbab89');
+      ink.addColorStop(.84, '#76618d'); ink.addColorStop(1, '#393146');
+      ctx.strokeStyle = ink; ctx.lineWidth = 1; ctx.stroke();
+    }
+    ctx.restore(); return;
   }
   const g=geometry, scale=Math.min((w-66)/Math.max(.00001,g.x1-g.x0),(h-62)/Math.max(.00001,g.y1-g.y0))*zoom;
   const screen=([x,y])=>[w/2+offset[0]+(x-(g.x0+g.x1)/2)*scale,h/2+offset[1]-(y-(g.y0+g.y1)/2)*scale];
   if(el('route').checked && g.predicted.length) {
     ctx.beginPath();g.predicted.forEach((p,i)=>{const [x,y]=screen(p);if(i)ctx.lineTo(x,y);else ctx.moveTo(x,y);});
-    ctx.strokeStyle='#ff8561';ctx.lineWidth=4;ctx.lineJoin='round';ctx.stroke();
-    const [x,y]=screen(g.predicted[0]);ctx.beginPath();ctx.arc(x,y,4,0,2*Math.PI);ctx.fillStyle='#ff8561';ctx.fill();
+    ctx.strokeStyle='#ffbc69';ctx.lineWidth=4;ctx.lineJoin='round';ctx.stroke();
+    const [x,y]=screen(g.predicted[0]);ctx.beginPath();ctx.arc(x,y,4,0,2*Math.PI);ctx.fillStyle='#ffbc69';ctx.fill();
   }
   if(el('gps').checked) {
-    ctx.fillStyle='#6ab5ff';ctx.beginPath();
+    ctx.fillStyle='#98acff';ctx.beginPath();
     for(const p of g.observations){const [x,y]=screen(p);ctx.moveTo(x+2,y);ctx.arc(x,y,2,0,2*Math.PI);}ctx.fill();
   }
   const centerLat=g.origin[1]+(g.y0+g.y1)/2+offset[1]/scale;

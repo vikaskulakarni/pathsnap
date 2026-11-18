@@ -65,6 +65,14 @@ The second command runs all five baselines, including logistic regression. Use `
 
 See [AI_USAGE.md](AI_USAGE.md) for the Phase 1 assistance record.
 
+## Complete the Laptop 2 model and report workflow
+
+After the real feature handoff, run `python -m optimisation.finish_models --data-root "<student-data-root>"`. This command trains all five baselines, compares observation-level Top-1 (ties use CV macro F1, then log loss), exports the two leading candidates, and tunes the leader on training trips with grouped CV macro F1 as the objective. It records Bayesian trials and before/after results, saves the final out-of-fold probabilities, and exports the tuned model, feature order, and best parameters. The defaults are 40 trials and a 30-minute search timeout.
+
+Once Laptop 1 supplies student-test per-observation classifier and HMM predictions under `results/predictions/`, run `python -m visualisations.plot_prediction --data-root "<student-data-root>"` to render comparison maps and static figures.
+
+Run `python -m report.assemble` to generate a printable HTML report draft from available results. It includes source captions and marks missing experiments. Add the real Folium view, evaluator UI screenshot, and receiving-terminal screenshot as `report/screenshots/folium.png`, `ui.png`, and `api.png`. The final PDF needs the team's interpretations for each model, tuning, and decoding, plus the measured results from both laptops.
+
 ## Submission checklist
 
 - [ ] Commit the code and dependencies for preprocessing, candidate generation, feature engineering, training, evaluation, FastAPI, the UI, and deployment.
