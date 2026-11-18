@@ -41,6 +41,12 @@ numbers (accuracy and route continuity). Reference arcs never appear in a respon
 
 Raw data lives in `data/{train,student_test,eval_test}/<trip>/` (`.track`, `.nodes`, `.arcs`, `.route`) and is not committed.
 
+## Laptop 2 handoff
+
+The [technical report](report/PathSnap_Report.pdf) uses the deployed artifacts and active results. [Rehearsal results](report/rehearsal.csv) and the [receiving-server log](report/rehearsal.log) cover all ten student-test trips through the browser on one host. Use scikit-learn 1.7.0 to load the published joblib model.
+
+For the physical demo, start the API on Laptop 1, serve student_test for rehearsal, and run the UI on Laptop 2 with Laptop 1’s actual LAN address. Capture the UI and receiving terminal for the same request. Keep the default eval_test split for the official evaluation. Rebuild the report with `python -m report.build_report`.
+
 ## Reproduce the results
 
 ```powershell
