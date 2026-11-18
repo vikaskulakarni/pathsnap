@@ -10,13 +10,18 @@ EMISSIONS = ("distance", "distance+heading")
 
 
 def decode_trip(features_df: pd.DataFrame, params: dict, graph: RoadGraph,
-                emission: str = "distance", n_points: int | None = None) -> pd.DataFrame:
+                emission: str = "distance", n_points: int | None = None,
+                return_stats: bool = False):
     """DataFrame[point_idx, arc_id], exactly one arc per GPS point.
 
     features_df is one trip's candidate table (labels not needed). The graph is that
     trip's own RoadGraph. A point without candidates takes the previous decoded arc
     (the first points take the first decoded arc); Viterbi runs over the rest, and the
     time gap across skipped points counts toward the gap rule.
+
+    With return_stats=True also returns {"steps", "eps_steps", "filled_points"}: how many
+    Viterbi steps there were, how many of the chosen transitions fell back to epsilon
+    (a disconnected jump), and how many points had no candidates.
     """
     if emission not in EMISSIONS:
         raise ValueError(f"emission must be one of {EMISSIONS}")
@@ -33,10 +38,15 @@ def decode_trip(features_df: pd.DataFrame, params: dict, graph: RoadGraph,
         emis.append(e)
         times.append(float(g.t.iloc[0]))
 
+    mats: dict[int, np.ndarray] = {}
+
     def trans(t: int) -> np.ndarray:
-        return transition_matrix(arcs[t - 1], arcs[t], graph, times[t] - times[t - 1], params)
+        mats[t] = transition_matrix(arcs[t - 1], arcs[t], graph, times[t] - times[t - 1], params)
+        return mats[t]
 
     path = viterbi(emis, trans)
+    log_eps = np.log(params["eps"])
+    eps_steps = sum(mats[t][path[t - 1], path[t]] == log_eps for t in range(1, len(path)))
     out = np.full(n_points, -1, dtype=np.int64)
     for pid, a, k in zip(ids, arcs, path):
         out[pid] = a[k]
@@ -46,4 +56,8 @@ def decode_trip(features_df: pd.DataFrame, params: dict, graph: RoadGraph,
             if out[i] < 0:
                 out[i] = last
             last = out[i]
-    return pd.DataFrame({"point_idx": np.arange(n_points), "arc_id": out})
+    result = pd.DataFrame({"point_idx": np.arange(n_points), "arc_id": out})
+    if return_stats:
+        return result, {"steps": max(len(path) - 1, 0), "eps_steps": int(eps_steps),
+                        "filled_points": n_points - len(ids)}
+    return result
