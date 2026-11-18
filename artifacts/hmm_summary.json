@@ -1,0 +1,7 @@
+{
+  "mean_classifier_accuracy": 81.30499999999999,
+  "mean_hmm_accuracy": 75.784,
+  "mean_classifier_continuity": 87.804,
+  "mean_hmm_continuity": 94.094,
+  "continuity_improvement": 6.289999999999992
+}
