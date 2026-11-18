@@ -6,7 +6,7 @@ Pipeline: candidate arcs per GPS point -> classifier scores each (point, arc) pa
 -> HMM/Viterbi picks a connected route -> FastAPI on laptop 1 serves predictions
 to a Streamlit UI on laptop 2.
 
-## Data (data/raw/{train,student_test,eval_test}/<trip>/)
+## Data (data/{train,student_test,eval_test}/<trip>/, NOT data/raw/)
 - train = 80 trips, student_test = 10 trips, eval_test = 10 trips (final evaluation only)
 - .track : lon lat t   (whitespace, no header, t in seconds, ~1 Hz)
 - .nodes : lon lat     (row index, 0-based = node_id)
