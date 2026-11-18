@@ -26,7 +26,44 @@ Evaluator reference routes stay on Laptop 1 with the scorer. The prediction pipe
 
 The planned local data layout is `data/raw/{train,student_test,eval_test}/<trip_id>/`. Generated candidate tables go in `data/processed/`. Keep these data files local. Use the 80 training trips for fitting and trip-grouped cross-validation, the 10 student-test trips for development comparisons, and the reserved evaluator partition for final evaluation.
 
-Use Python 3.10 or later and install the shared dependencies in a virtual environment with `python -m pip install -r requirements.txt`. Run instructions for the API, UI, and model pipeline will be added as those components land.
+Use Python 3.10 or later and install the shared dependencies in a virtual environment with `python -m pip install -r requirements.txt`.
+
+## Run the UI on Laptop 2
+
+From the repository root, run:
+
+```text
+python -m streamlit run ui/app.py
+```
+
+In the sidebar, enter Laptop 1's API address in the form `http://<laptop-1-ip>:8000` and click **Check connection**. The default is `http://localhost:8000`, or the value of `PATHSNAP_API_URL` if set. Both laptops need to be on the same reachable network and Laptop 1 must be serving FastAPI.
+
+Select a trip from `GET /trips` and click **Predict**. The UI sends its ID to `POST /predict`, then draws the GPS observations and predicted route and shows the server's scores. Use **Refresh trips** if the server's trip list changes.
+
+## Reproduce the Laptop 2 analysis
+
+After the Laptop 1 shared loaders land, use the student dataset directory as `--data-root` if it differs from Laptop 1's configured location:
+
+```text
+python -m pytest -q
+python -m visualisations.eda_plots --data-root "<student-data-root>"
+python -m visualisations.plot_trip --split train --trip "<trip-id>" --data-root "<student-data-root>"
+```
+
+EDA writes inventory, quality, network and GPS-distance tables to `results/eda/` and PNGs to `results/figures/`. The notebook `notebooks/01_eda.ipynb` uses the same analysis. The Folium command writes a local HTML map to `visualisations/maps/`.
+
+## Train after the Laptop 1 feature handoff
+
+Place the Laptop 1 outputs `train_features.parquet` and `student_test_features.parquet` under `data/processed/`. The runner also needs the development road graph for route continuity.
+
+```text
+python -m models.train_logreg --data-root "<student-data-root>"
+python -m models.train_baselines --data-root "<student-data-root>"
+```
+
+The second command runs all five baselines, including logistic regression. Use `--model` with `logreg`, `knn`, `rf`, `lgbm`, or `mlp` to run a single model. Each run saves candidate weights and feature order under `artifacts/candidates/`, out-of-fold probabilities under `results/oof/`, and metrics in `results/experiments.csv`. Final model selection and Bayesian tuning follow the real development runs.
+
+See [AI_USAGE.md](AI_USAGE.md) for the Phase 1 assistance record.
 
 ## Submission checklist
 
