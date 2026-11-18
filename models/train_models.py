@@ -1,7 +1,7 @@
 """Train and compare five model families on the candidate-feature table.
 
-Fit/CV on the train trips (GroupKFold by trip, 7 unreliable-label trips excluded),
-development comparison on the 10 student_test trips. Saves out-of-fold probabilities
+Fit/CV on ALL 80 train trips (GroupKFold by trip; the 7 unreliable-label trips are only studied
+in models/ablation_trips.py), development comparison on the 10 student_test trips. Saves out-of-fold probabilities
 (for decoder tuning), every fitted model, the comparison table and figures.
 
 Run: python -m models.train_models

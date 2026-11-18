@@ -1,9 +1,11 @@
 """Bayesian hyperparameter optimisation (Optuna TPE) of the best model from models.train_models.
 
-Search: TPE on a seeded half of the train trips, 3-fold GroupKFold by trip, objective =
-mean observation-level Top-1. The best configuration is then refit on all train trips and
-compared with the untuned model on the SAME 5 trip-grouped folds and on student_test.
-The final model is chosen by cross-validation, not by student_test.
+Search (cheap, per trial): TPE on a seeded sample of SEARCH_TRIPS of the 80 train trips, 3-fold
+GroupKFold by trip, objective = mean observation-level Top-1.
+Final comparison (full protocol): the best configuration is refit on ALL 80 train trips and compared
+with the untuned model on the SAME 5 trip-grouped folds of all 80 trips (identical to
+models.train_models) and on student_test. The final model is chosen by cross-validation, not by
+student_test.
 
 Run: python -m optimisation.bayes_tune   (after models.train_models)
 """
