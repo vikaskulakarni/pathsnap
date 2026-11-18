@@ -1,7 +1,0 @@
-{
-  "best_model_name": "HistGradientBoosting",
-  "top1_accuracy": 79.62,
-  "macro_f1": 0.8396,
-  "algorithm_family": "Boosting",
-  "config": "HistGradientBoostingClassifier(max_iter=100, lr=0.1)"
-}

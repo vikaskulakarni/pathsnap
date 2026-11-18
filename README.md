@@ -37,15 +37,17 @@ numbers (accuracy and route continuity). Reference arcs never appear in a respon
 | `artifacts/` | deployed model (`model.joblib`, `model_alt.joblib`), `feature_list.json`, `hmm_config.json`, `best_params.json` |
 | `results/` | every reported number and figure, produced by code (`eda/`, `figures/`, `predictions/`, CSV tables) |
 | `tests/`, `scripts/` | tests; demo start scripts |
-| `legacy/` | superseded phase-1 pipeline, kept for reference only (see `legacy/README.md`) |
+| `report/` | technical report, generator, browser rehearsal results and server log |
 
 Raw data lives in `data/{train,student_test,eval_test}/<trip>/` (`.track`, `.nodes`, `.arcs`, `.route`) and is not committed.
 
-## Laptop 2 handoff
+## Submission checklist
 
 The [technical report](report/PathSnap_Report.pdf) uses the deployed artifacts and active results. [Rehearsal results](report/rehearsal.csv) and the [receiving-server log](report/rehearsal.log) cover all ten student-test trips through the browser on one host. Use scikit-learn 1.7.0 to load the published joblib model.
 
 For the physical demo, start the API on Laptop 1, serve student_test for rehearsal, and run the UI on Laptop 2 with Laptop 1’s actual LAN address. Capture the UI and receiving terminal for the same request. Keep the default eval_test split for the official evaluation. Rebuild the report with `python -m report.build_report`.
+
+The [earlier Phase 1 implementation](https://github.com/vikaskulakarni/pathsnap/tree/4740fb36e2c72e1f7b31edbaa7bf8b08eed1a186) and [Laptop 2 starter experiments](https://github.com/vikaskulakarni/pathsnap/tree/985ee0670ef9dc2b3edb82d3775e3b2d194f6d0a) are preserved for provenance. Use the scripts and experiment tables in this checkout for the submitted system.
 
 ## Reproduce the results
 

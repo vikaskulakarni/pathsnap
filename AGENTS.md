@@ -4,7 +4,7 @@
 PES UE24CS352A map-matching hackathon. Noisy GPS points are matched to road arcs.
 Pipeline: candidate arcs per GPS point -> classifier scores each (point, arc) pair
 -> HMM/Viterbi picks a connected route -> FastAPI on laptop 1 serves predictions
-to a Streamlit UI on laptop 2.
+to the browser UI on laptop 2.
 
 ## Data (data/{train,student_test,eval_test}/<trip>/, NOT data/raw/)
 - train = 80 trips, student_test = 10 trips, eval_test = 10 trips (final evaluation only)
