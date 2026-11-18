@@ -14,15 +14,18 @@ def load_table(split: str) -> pd.DataFrame:
 
 
 def flagged_train_trips() -> set[str]:
-    """Train trips whose reference labels are unreliable (p95 > 30 m from label_points).
-    Derived from train labels only; excluded from fitting, CV and decoder tuning."""
+    """Train trips whose reference labels are unreliable (p95 > P95_FLAG_M in label_points).
+    Derived from train labels only. Used for reporting (miss rate by trip) and the ablation; the
+    main protocol still trains and cross-validates on all 80 train trips."""
     q = pd.read_csv(RESULTS / "eda" / "label_quality.csv", dtype={"trip": str})
     return set(q[(q.split == "train") & q.flag_p95_gt_30].trip)
 
 
-def load_train() -> pd.DataFrame:
+def load_train(exclude_flagged: bool = False) -> pd.DataFrame:
+    """All 80 train trips (the protocol). exclude_flagged=True drops the trips whose reference
+    labels fail the quality check; models.ablation_trips shows that this makes no real difference."""
     df = load_table("train")
-    return df[~df.trip_id.isin(flagged_train_trips())].reset_index(drop=True)
+    return df[~df.trip_id.isin(flagged_train_trips())].reset_index(drop=True) if exclude_flagged else df
 
 
 def point_top1(df: pd.DataFrame, proba: np.ndarray) -> float:

@@ -22,7 +22,7 @@ from common.config import FIGURES, RESULTS
 from common.io import list_trips, load_arcs
 from hmm.classifier import load_artifacts, score_candidates
 from hmm.decode import decode_trip
-from hmm.params import load_params
+from hmm.params import BASELINE_CONFIG_PATH, load_params
 from hmm.road_graph import RoadGraph
 from models.common import load_table
 
@@ -62,6 +62,7 @@ def ranges(mask: np.ndarray, top: int = 5) -> str:
 
 def main():
     params = load_params()
+    base_params = load_params(BASELINE_CONFIG_PATH)  # distance-only baseline, tuned on its own
     table = load_table(SPLIT)
     models = {"model": load_artifacts()[:2], "alt": load_artifacts(alt=True)[:2]}
     method_names = ["nearest_arc", "classifier_only(model)", "classifier_only(alt)", "hmm_distance",
@@ -87,7 +88,8 @@ def main():
             eps[f"hmm_classifier({tag})"][0] += st["eps_steps"]
             eps[f"hmm_classifier({tag})"][1] += st["steps"]
         t0 = time.perf_counter()
-        out, st = decode_trip(df, params, graph, "distance", n, return_stats=True)
+        base_emission = "distance+heading" if base_params["heading_weight"] > 0 else "distance"
+        out, st = decode_trip(df, base_params, graph, base_emission, n, return_stats=True)
         secs["hmm_distance"] += time.perf_counter() - t0
         preds["hmm_distance"] = out.arc_id.to_numpy()
         eps["hmm_distance"][0] += st["eps_steps"]
