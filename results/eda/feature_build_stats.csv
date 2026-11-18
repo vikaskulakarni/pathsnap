@@ -1,0 +1,2 @@
+split,trips,points,rows,miss_rate,miss_twin_only_share,mean_rows_per_point,positive_share,sec_per_trip,k,radius_m
+student_test,10,19160,122193,0.003705636743215031,0.0,6.377505219206681,0.15622007807321206,0.26520524024963377,8,60.0
