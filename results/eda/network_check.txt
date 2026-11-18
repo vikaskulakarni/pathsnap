@@ -1,0 +1,6 @@
+trips checked (train + student_test): 90
+distinct .nodes files: 90  distinct .arcs files: 90
+road network: PER-TRIP (differs between trips)
+arcs whose reverse (to->from) also exists: 3747676/4060042 = 92.3%  (high => mostly two-way; low => one-way)
+route arc_ids not present in .arcs: 0/34813
+consecutive route arcs that connect (to_node == next from_node): 34709/34723 = 100.0%
