@@ -4,11 +4,11 @@
   "selected_file": "hist_gradient_boosting_tuned",
   "alt_model": "random_forest",
   "best_params": {
-    "learning_rate": 0.029789881843994837,
-    "max_iter": 99,
-    "max_leaf_nodes": 18,
-    "min_samples_leaf": 147,
-    "l2_regularization": 0.0007216532978755471
+    "learning_rate": 0.09304854626697996,
+    "max_iter": 189,
+    "max_leaf_nodes": 50,
+    "min_samples_leaf": 181,
+    "l2_regularization": 0.0001601173409473354
   },
   "untuned_params": {
     "l2_regularization": 0.0,
@@ -23,8 +23,8 @@
     "folds": 3,
     "trips": 36,
     "objective": "mean observation-level Top-1",
-    "best_objective": 0.8638818108263439,
-    "seconds": 157.59455290000187,
+    "best_objective": 0.8494302960594217,
+    "seconds": 555.1264621999871,
     "seed": 42
   }
 }

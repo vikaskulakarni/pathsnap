@@ -1,0 +1,13 @@
+feature,top1_drop_mean,top1_drop_std
+heading_diff,0.35063,0.00467
+dist_minus_min,0.12288,0.00327
+proj_t,0.05529,0.00161
+dist_m,0.01329,0.0023
+connects_prev_best,0.01166,0.00094
+speed_mps,0.00705,0.00085
+has_twin,0.00609,0.00147
+arc_len_m,0.00379,0.00034
+dist_rank,0.00073,0.00052
+dt_s,0.00019,7e-05
+low_speed,0.0,0.0
+fallback,0.0,0.0
