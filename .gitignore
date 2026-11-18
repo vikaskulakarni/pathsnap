@@ -1,9 +1,28 @@
+# Raw GPS and road-network data
+/data/
+/train/
+/student_test/
+/evaluator_test/
+**/Student folder/
+*.track
+*.nodes
+*.arcs
+*.route
+
+# Local credentials and settings
+.env
+.env.*
+!.env.example
+*.pem
+*.key
+
+# Local development environments and generated files
 .venv/
 __pycache__/
-*.pyc
+*.py[cod]
+.pytest_cache/
 .ipynb_checkpoints/
-.env
+node_modules/
+dist/
 .DS_Store
-notes/
-data/processed/*.parquet
-artifacts/candidates/
+Thumbs.db
