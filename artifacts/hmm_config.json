@@ -1,13 +1,13 @@
 {
   "sigma_m": 8.0,
   "heading_sigma_deg": 45.0,
-  "heading_weight": 1.0,
-  "same": 0.6,
+  "heading_weight": 0.0,
+  "same": 0.8,
   "succ": 0.3,
   "hop2": 0.05,
   "hop3": 0.02,
-  "uturn": 0.001,
+  "uturn": 0.01,
   "eps": 1e-06,
-  "gap_s": 10.0,
+  "gap_s": 20.0,
   "gap_extra_hops": 3
 }
