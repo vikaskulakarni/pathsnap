@@ -1,0 +1,14 @@
+{
+  "w": 0.0,
+  "sigma_m": 12.0,
+  "heading_sigma_deg": 45.0,
+  "heading_weight": 0.0,
+  "same": 0.6,
+  "succ": 0.3,
+  "hop2": 0.05,
+  "hop3": 0.02,
+  "uturn": 0.01,
+  "eps": 1e-08,
+  "gap_s": 20.0,
+  "gap_extra_hops": 3
+}

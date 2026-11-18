@@ -1,0 +1,3 @@
+train_set,trips,rows,test_top1,test_macro_f1,test_log_loss,test_route_continuity
+all 80 train trips,80,1314688,0.85632,0.91625,0.10922,0.93577
+73 trips (7 flagged excluded),73,932014,0.85637,0.91535,0.11131,0.93352
