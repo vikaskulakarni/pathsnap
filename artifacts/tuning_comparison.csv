@@ -1,0 +1,3 @@
+Configuration,CV Macro F1,Student-Test Top-1 Accuracy (%),Student-Test Macro F1,Route Continuity (%),Log Loss,Inference Latency (ms/1k)
+Untuned Baseline,0.7463,79.62,0.8396,87.75,0.3533,2.29
+Tuned (Bayesian Opt),0.7468,79.58,0.8399,87.8,0.3539,3.87
