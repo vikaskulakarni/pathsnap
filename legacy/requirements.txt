@@ -1,5 +1,0 @@
-# Extra packages needed only by the superseded pipeline in legacy/phase1_pipeline (not by the maintained code).
--r ../requirements.txt
-seaborn==0.13.2
-reportlab==5.1.0
-pypdf==6.13.1
