@@ -1,0 +1,7 @@
+run_at,split,method,trips,points,top1,wrong_direction_rate,route_continuity,trips_ge90_share,decode_s_per_trip,config
+2026-11-18T11:48:18,student_test,nearest_arc,10,19160,0.53951,0.35063,0.8201,0.0,0.01277,hmm_config.json
+2026-11-18T11:48:18,student_test,hmm_distance,10,19160,0.92281,0.02787,0.99311,0.7,1.15045,hmm_config.json
+2026-11-18T11:48:18,student_test,hmm_distance+heading,10,19160,0.86571,0.0464,0.97452,0.5,1.22443,hmm_config.json
+2026-11-18T12:11:29,student_test,nearest_arc,10,19160,0.53951,0.35063,0.8201,0.0,,0.01364,"{""sigma_m"": 8.0, ""heading_sigma_deg"": 45.0, ""heading_weight"": 0.0, ""same"": 0.8, ""succ"": 0.3, ""hop2"": 0.05, ""hop3"": 0.02, ""uturn"": 0.01, ""eps"": 1e-06, ""gap_s"": 20.0, ""gap_extra_hops"": 3}"
+2026-11-18T12:11:29,student_test,hmm_distance,10,19160,0.92568,0.02777,0.99274,0.7,0.00099,1.14231,"{""sigma_m"": 8.0, ""heading_sigma_deg"": 45.0, ""heading_weight"": 0.0, ""same"": 0.8, ""succ"": 0.3, ""hop2"": 0.05, ""hop3"": 0.02, ""uturn"": 0.01, ""eps"": 1e-06, ""gap_s"": 20.0, ""gap_extra_hops"": 3}"
+2026-11-18T12:11:29,student_test,hmm_distance+heading,10,19160,0.92568,0.02777,0.99274,0.7,0.00099,1.24263,"{""sigma_m"": 8.0, ""heading_sigma_deg"": 45.0, ""heading_weight"": 0.0, ""same"": 0.8, ""succ"": 0.3, ""hop2"": 0.05, ""hop3"": 0.02, ""uturn"": 0.01, ""eps"": 1e-06, ""gap_s"": 20.0, ""gap_extra_hops"": 3}"
