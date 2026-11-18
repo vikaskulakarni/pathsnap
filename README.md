@@ -40,6 +40,22 @@ python -m features.make_tables --splits train student_test       # labelled feat
 
 Model inputs are `features.build_features.FEATURE_COLUMNS`; the identifier and location columns in `METADATA_COLUMNS` must not be used as model inputs.
 
+### Models, decoder and API (run after the data pipeline)
+
+```
+python -m models.train_models          # 5 model families, GroupKFold by trip, OOF probabilities, comparison table/figures
+python -m optimisation.bayes_tune      # Optuna TPE on the best model; writes artifacts/model.joblib, model_alt.joblib, best_params.json
+python -m hmm.tune                     # decoder tuning on train out-of-fold probabilities, confirmed on student_test
+python -m hmm.evaluate                 # classifier-only vs HMM comparison -> results/hmm_results.csv, hmm_failures.csv, figure
+python -m hmm.pipeline --split student_test --save   # predictions for the maps -> results/predictions/
+python -m uvicorn api.main:app --host 0.0.0.0 --port 8000
+python -m api.smoke_test --url http://localhost:8000
+```
+
+Set `PATHSNAP_EVAL_SPLIT=student_test` to rehearse the API while `data/eval_test/` is not present. The API predicts first (no labels
+involved) and only afterwards `api/evaluation.py` reads the held-out route and returns two numbers (accuracy, route continuity).
+Large reproducible outputs (`results/oof/`, `artifacts/models/`) are git-ignored; regenerate them with the commands above.
+
 ## Submission checklist
 
 - [ ] Commit the code and dependencies for preprocessing, candidate generation, feature engineering, training, evaluation, FastAPI, the UI, and deployment.
