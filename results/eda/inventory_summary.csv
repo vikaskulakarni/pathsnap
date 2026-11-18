@@ -1,0 +1,3 @@
+split,size,min,median,max,sum
+student_test,10,262,1420.0,3958,19160
+train,80,361,1529.0,19313,208417
