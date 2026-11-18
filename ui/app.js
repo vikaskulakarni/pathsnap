@@ -124,6 +124,72 @@ function project(gps, route) {
 }
 function fit() {zoom=1; offset=[0,0]; draw();}
 function adjust(mult) {if (geometry) {zoom=Math.min(64,Math.max(.25,zoom*mult)); draw();}}
+function drawInterchange(w, h) {
+  // Orthographic illustration in local scene units. It never supplies trip coordinates.
+  ctx.save();
+  const scale = Math.min(w / 740, h / 360);
+  ctx.translate(w * .5, h * .49);
+  ctx.scale(scale, scale);
+  const project = (x, y, z = 0) => [(x - y) * .84, (x + y) * .39 - z];
+  function polygon(vertices, color) {
+    ctx.beginPath();
+    vertices.forEach(([x,y], i) => i ? ctx.lineTo(x,y) : ctx.moveTo(x,y));
+    ctx.closePath(); ctx.fillStyle = color; ctx.fill();
+  }
+  function line(points, color, width) {
+    ctx.beginPath();
+    points.forEach(([x,y], i) => i ? ctx.lineTo(x,y) : ctx.moveTo(x,y));
+    ctx.strokeStyle = color; ctx.lineWidth = width; ctx.lineJoin = ctx.lineCap = 'round'; ctx.stroke();
+  }
+  function block(x,y,a,b,z,colors) {
+    const base = [[x,y],[x+a,y],[x+a,y+b],[x,y+b]].map(([i,j])=>project(i,j));
+    const top = base.map(([i,j])=>[i,j-z]);
+    polygon([base[1],base[2],top[2],top[1]],colors[0]);
+    polygon([base[2],base[3],top[3],top[2]],colors[1]);
+    polygon(top,colors[2]);
+    return top;
+  }
+  const floor = '#2b2936';
+  block(-202,-174,404,348,7,['#191722','#201d2a',floor]);
+  for (let x=-192;x<=192;x+=32) line([project(x,-172,7),project(x,172,7)],'#494252',2);
+  for (let y=-160;y<=160;y+=32) line([project(-200,y,7),project(200,y,7)],'#494252',2);
+  const buildings=[];
+  for(let x=-188;x<187;x+=32) for(let y=-155;y<153;y+=32) {
+    if(Math.abs(x+9)<35 || Math.abs(y+10)<34 || (Math.abs(x)<105 && Math.abs(y)<94)) continue;
+    buildings.push([x,y]);
+  }
+  buildings.sort((a,b)=>a[0]+a[1]-b[0]-b[1]);
+  for(const [x,y] of buildings) {
+    const n=Math.abs(Math.sin(x*7.1+y*3.37)), z=12+Math.round(n*25);
+    const top=block(x,y,15+n*7,17,z,['#383344','#454052','#666074']);
+    line([top[3],top[2],top[1]],'#83798b',.65);
+    if(n>.56) block(x+4,y+4,6,7,z+2,['#494352','#4a4352','#807888']);
+    for(let level=10;level<z-3;level+=7)
+      line([project(x+3,y+17,level),project(x+12,y+17,level)],'#8b79926b',1);
+  }
+  function ramp(fn,height,width) {
+    const points=Array.from({length:101},(_,i)=>{const [x,y]=fn(i/100);return project(x,y,height);});
+    line(points.map(([x,y])=>[x+3,y+height*.65]),'#15131c99',width+3);
+    line(points,'#897c93',width+2); line(points,'#423d4c',width);
+    ctx.setLineDash([4,5]);line(points,'#ac9bad',.85);ctx.setLineDash([]);
+    return points;
+  }
+  ramp(t=>[-200+400*t,0],9,13);
+  for(const sign of [-1,1]) {
+    ramp(t=>[sign*(92-92*Math.sin(t*Math.PI/2)),sign*(73-73*Math.cos(t*Math.PI/2))],13,6);
+    ramp(t=>[sign*(51-49*Math.cos(t*1.5*Math.PI)),sign*(-39+37*Math.sin(t*1.5*Math.PI))],15,6);
+  }
+  for(let y=-154;y<170;y+=36) block(-3,y,6,7,20,['#36313e','#53495c','#796a83']);
+  const flyover=ramp(t=>[9*Math.sin(t*Math.PI*2),-170+340*t],24,15);
+  ctx.shadowColor='#ff963e';ctx.shadowBlur=11;
+  line(flyover,'#ff9e44',3.5);ctx.shadowBlur=0;line(flyover,'#ffe0a3',1.1);
+  for(let i=3;i<100;i+=4) {
+    const [x,y]=flyover[i];ctx.beginPath();ctx.arc(x+4+Math.sin(i)*2,y-1,1.9,0,Math.PI*2);
+    ctx.shadowColor='#53acff';ctx.shadowBlur=5;ctx.fillStyle='#81caff';ctx.fill();ctx.shadowBlur=0;
+  }
+  ctx.restore();
+}
+
 function draw() {
   const w=canvas.clientWidth,h=canvas.clientHeight,dpr=window.devicePixelRatio || 1;
   canvas.width=Math.round(w*dpr);canvas.height=Math.round(h*dpr);ctx.scale(dpr,dpr);
@@ -134,32 +200,7 @@ function draw() {
   for(const id of ['plus','minus','fit','gps','route']) el(id).disabled=!geometry;
   if(!geometry) {
     if (result) return;
-    // An illustrative relief surface occupies the idle map. Real trips use the projection below.
-    ctx.save();
-    ctx.scale(w / 1000, h / 460);
-    const glow = ctx.createRadialGradient(630, 195, 12, 630, 195, 490);
-    glow.addColorStop(0, '#322843'); glow.addColorStop(1, '#11101c');
-    ctx.fillStyle = glow; ctx.fillRect(0, 0, 1000, 460);
-    function elevation(x, y) {
-      const ridge = x - (570 + 100 * Math.sin(y / 89) - .28 * y);
-      const peak = Math.exp(-ridge * ridge / 36000) * (132 + 43 * Math.cos(y / 65));
-      return peak + 32 * Math.sin(x / 99 + y / 59) + 16 * Math.cos(x / 53 - y / 101);
-    }
-    for (let y = -70; y < 620; y += 6) {
-      ctx.beginPath();
-      for (let x = -15; x <= 1020; x += 4) {
-        const py = y - elevation(x, y);
-        if (x === -15) ctx.moveTo(x, py); else ctx.lineTo(x, py);
-      }
-      ctx.lineTo(1020, 650); ctx.lineTo(-15, 650); ctx.closePath();
-      ctx.fillStyle = '#171424'; ctx.fill();
-      const ink = ctx.createLinearGradient(0, 0, 1000, 0);
-      ink.addColorStop(0, '#211d33'); ink.addColorStop(.28, '#584576');
-      ink.addColorStop(.53, '#a68bcc'); ink.addColorStop(.67, '#dbab89');
-      ink.addColorStop(.84, '#76618d'); ink.addColorStop(1, '#393146');
-      ctx.strokeStyle = ink; ctx.lineWidth = 1; ctx.stroke();
-    }
-    ctx.restore(); return;
+    drawInterchange(w, h); return;
   }
   const g=geometry, scale=Math.min((w-66)/Math.max(.00001,g.x1-g.x0),(h-62)/Math.max(.00001,g.y1-g.y0))*zoom;
   const screen=([x,y])=>[w/2+offset[0]+(x-(g.x0+g.x1)/2)*scale,h/2+offset[1]-(y-(g.y0+g.y1)/2)*scale];
@@ -169,7 +210,7 @@ function draw() {
     const [x,y]=screen(g.predicted[0]);ctx.beginPath();ctx.arc(x,y,4,0,2*Math.PI);ctx.fillStyle='#ffbc69';ctx.fill();
   }
   if(el('gps').checked) {
-    ctx.fillStyle='#98acff';ctx.beginPath();
+    ctx.fillStyle='#6bbbff';ctx.beginPath();
     for(const p of g.observations){const [x,y]=screen(p);ctx.moveTo(x+2,y);ctx.arc(x,y,2,0,2*Math.PI);}ctx.fill();
   }
   const centerLat=g.origin[1]+(g.y0+g.y1)/2+offset[1]/scale;
