@@ -15,7 +15,12 @@ def fingerprint(directory=ARTIFACTS):
     hashes = {}
     for name in FILES:
         source = ARTIFACTS if name == "hmm_config.json" else directory
-        with (source / name).open("rb") as stream:
+        path = source / name
+        if path.suffix == ".json":
+            # Git can check JSON out with LF or CRLF depending on the operating system.
+            hashes[name] = hashlib.sha256(path.read_text(encoding="utf8").encode("utf8")).hexdigest()
+            continue
+        with path.open("rb") as stream:
             digest = hashlib.sha256()
             for chunk in iter(lambda: stream.read(1024 * 1024), b""):
                 digest.update(chunk)

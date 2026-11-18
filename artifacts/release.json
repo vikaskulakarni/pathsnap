@@ -3,8 +3,8 @@
   "files_sha256": {
     "model.joblib": "45914df7de0b1911cab5390afe2968a61723164e1be5d879bea58e2148e37dd5",
     "model_alt.joblib": "961440bed79c1e93868cdadbf736346d3762357d76fbc8c9b55cfefdeb652d11",
-    "feature_list.json": "736f584a506c32c0fdc533afb6b681869e3d3ebd64c408ddd640fa98355ae16f",
-    "best_params.json": "2eeaa111bd05f84f2893595de006abf5d913eeb38e9f363c6f7d6b5ba3ea9ec1",
-    "hmm_config.json": "5d34c4c3e2a384032594ea1844977ce227950220d6ec11ad17ccbcba1ac0487c"
+    "feature_list.json": "5ecc7d93d2772661483e0f7555e25cb97a09485d858f1c64b0ccd3d3949bba5d",
+    "best_params.json": "cf48d62c7c28c8cbb2c3b9d2419db7414be983ac95534fb73cd255e31c353905",
+    "hmm_config.json": "c35792530d3ab46a601d7a2fde41b9adcf1f2eee2a5a8d41edf7e93e679c7133"
   }
 }
