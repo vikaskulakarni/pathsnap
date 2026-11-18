@@ -1,6 +1,7 @@
 """Build the technical report from canonical result tables and optional rehearsal images."""
 import argparse
 import csv
+import hashlib
 import json
 from pathlib import Path
 from xml.sax.saxutils import escape
@@ -86,6 +87,21 @@ def build(output, evidence):
     tuning=records(RESULTS/"tuning_comparison.csv")
     hmm=records(RESULTS/"hmm_results.csv")
     meta=json.loads((ROOT/"artifacts/best_params.json").read_text())
+    cfg=json.loads((ROOT/"artifacts/hmm_config.json").read_text())
+    version=hashlib.sha1(json.dumps(meta,sort_keys=True).encode()).hexdigest()[:8]
+    runs=records(ROOT/"report/rehearsal.csv")
+    stale={r["model_version"] for r in runs}-{version}
+    if stale:
+        raise SystemExit(f"report/rehearsal.csv was recorded with model version {sorted(stale)}, deployed version is {version}: run python -m report.rehearse")
+    by={r["method"]:r for r in hmm}
+    clf,main_hmm,dist_hmm=by["classifier_only(model)"],by["hmm_classifier(model)"],by["hmm_distance"]
+    gain_pp=(float(main_hmm["top1"])-float(clf["top1"]))*100
+    n_trips=int(main_hmm["trips"]); n90=round(float(main_hmm["trips_ge90_share"])*n_trips)
+    quality=records(RESULTS/"eda/label_quality.csv")
+    n_flagged=sum(1 for r in quality if r["split"]=="train" and r["flag_p95_gt_30"]=="True")
+    ablation={r["train_set"]:r for r in records(RESULTS/"ablation_flagged_trips.csv")}
+    abl_all=next(v for k,v in ablation.items() if k.startswith("all"))
+    abl_clean=next(v for k,v in ablation.items() if not k.startswith("all"))
     figs=RESULTS/"figures"
     pct=lambda v: f"{float(v)*100:.2f}%"
     names={"hist_gradient_boosting":"Histogram boosting","random_forest":"Random forest",
@@ -95,9 +111,9 @@ def build(output, evidence):
     doc.para("How much does road connectivity help when GPS alone leaves the direction of travel ambiguous?",True,16)
     doc.para("The system ranks nearby directed road segments for each observation, then uses Viterbi decoding to select a path. The browser on Laptop 2 submits a trip ID. Laptop 1 builds features, scores candidates, decodes the route, and evaluates the completed prediction against its local reference.")
     doc.table(["Student-test method","Top-1","Continuity"],[[r["method"],pct(r["top1"]),pct(r["route_continuity"])] for r in hmm if r["method"] in ("nearest_arc","classifier_only(model)","hmm_classifier(model)")],[245,122,148])
-    doc.para("Across 10 student-test trips and 19,160 observations, the deployed decoder improved pointwise accuracy by 8.30 percentage points over its underlying classifier. Both methods faced the same GPS observations and road networks.")
+    doc.para(f'Across {n_trips} student-test trips and {int(clf["points"]):,} observations, the deployed decoder changed pointwise accuracy by {gain_pp:+.2f} percentage points relative to its underlying classifier ({pct(clf["top1"])} to {pct(main_hmm["top1"])}). A distance-only HMM tuned on its own reached {pct(dist_hmm["top1"])} Top-1. All methods faced the same GPS observations and road networks.')
     doc.para("Data boundaries",True,14)
-    doc.para("The inventory covers 80 training trips and 10 student-test trips. Training labels come from aligning GPS points to an ordered reference route. Seven training trips exceeded the team's label-quality cutoff (95th percentile distance above 30 m); the deployed model comparison used the other 73. The earlier starter baseline used all 80 trips. Its score belongs to a separate run.")
+    doc.para(f'The inventory covers 80 training trips and 10 student-test trips. Training labels come from aligning GPS points to an ordered reference route. Model comparison, cross-validation and tuning use all 80 training trips. {n_flagged} training trips exceeded the label-quality cutoff (95th percentile distance above 30 m). Fitting the same model with and without them gave student-test Top-1 {pct(abl_all["test_top1"])} (all 80 trips) and {pct(abl_clean["test_top1"])} (without them); see results/ablation_flagged_trips.csv.')
     doc.para("The 10 student-test trips support development comparisons. Reserved evaluator trips were excluded from this rehearsal. Results throughout come from the active results/ directory and the deployed model identified by artifacts/best_params.json.")
     doc.page("Exploration","What the observations reveal")
     doc.para("All 90 development trips had a track, nodes, arcs and reference route. The scan found no missing numeric values, invalid coordinates or non-increasing timestamps. Road graphs differed by trip; 79 training graphs and all 10 student-test graphs contained multiple weak components.")
@@ -122,7 +138,9 @@ def build(output, evidence):
     for row in models:
         doc.para(names[row["model"]]+"  |  "+row["configuration"],True,10)
         doc.para(notes[row["model"]]+" Grouped CV Top-1 "+pct(row["cv_top1"])+"; student-test "+pct(row["test_top1"])+".",size=9.5)
-    doc.para("All five scored lower on student-test Top-1 than in grouped CV. Different trip populations can contribute to this gap; these two scores alone do not establish overfitting.",size=9)
+    cv=[float(r["cv_top1"]) for r in models]; te=[float(r["test_top1"]) for r in models]
+    relation="higher than" if all(t>c for t,c in zip(te,cv)) else ("lower than" if all(t<c for t,c in zip(te,cv)) else "not consistently ordered relative to")
+    doc.para(f"Grouped CV Top-1 ranged from {pct(min(cv))} to {pct(max(cv))}; student-test Top-1 from {pct(min(te))} to {pct(max(te))}, {relation} grouped CV for the five models. The grouped folds include the {n_flagged} trips with unreliable reference labels (candidate miss rate per trip in results/eda/candidate_miss_by_trip.csv), which can lower pooled CV Top-1. These two scores alone do not establish over- or underfitting.",size=9)
     doc.page("Model diagnostics","Discrimination and error cost")
     for fname,cap in [("model_cv_macro_f1","Grouped training-trip CV macro F1 across families."),("model_student_top1","Observation-level winners on the same 10 student-test trips."),("model_student_log_loss","Candidate-level probability loss penalises confident errors.")]:
         doc.image(figs/(fname+".png"),cap,155)
@@ -131,22 +149,21 @@ def build(output, evidence):
     doc.para(f'Optuna TPE ran {search["n_trials"]} trials with seed {search["seed"]}. To bound cost, the search used {search["folds"]} grouped folds on {search["trips"]} training trips. The objective was mean observation-level Top-1. The best search score was {pct(search["best_objective"])} in {search["seconds"]:.1f} seconds. The full training comparison below uses its own folds.')
     doc.table(["Parameter","Search range","Selected"],[[key,ran,f'{meta["best_params"][key]:.5g}'] for key,ran in [("learning_rate","0.02 to 0.3, log"),("max_iter","60 to 250"),("max_leaf_nodes","15 to 63"),("min_samples_leaf","20 to 200"),("l2_regularization","0.0001 to 10, log")]],[190,170,155])
     doc.table(["Configuration","CV Top-1","Test Top-1","Test F1","Continuity","Log loss"],[[r["configuration"],pct(r["cv_top1"]),pct(r["test_top1"]),r["test_macro_f1"],pct(r["test_route_continuity"]),r["test_log_loss"]] for r in tuning],[124,78,78,68,82,85])
-    doc.para("Tuning raised grouped CV Top-1 slightly. Student-test Top-1 moved from 85.637% to 85.600%; continuity and macro F1 rose slightly and log loss worsened. The tuned artifact was used for the decoder comparison.")
+    tu,tt=tuning[0],tuning[1]
+    doc.para(f'Tuning moved grouped CV Top-1 from {pct(tu["cv_top1"])} to {pct(tt["cv_top1"])}, student-test Top-1 from {pct(tu["test_top1"])} to {pct(tt["test_top1"])}, student-test macro F1 from {float(tu["test_macro_f1"]):.4f} to {float(tt["test_macro_f1"]):.4f}, and student-test log loss from {float(tu["test_log_loss"]):.4f} to {float(tt["test_log_loss"]):.4f}. {"The tuned artifact was selected by grouped CV and used for the decoder comparison." if meta["tuned"] else "The untuned model was kept."}')
     doc.image(figs/"optuna_history.png","Trial objective over the Bayesian search. Each point is a grouped validation measurement.",150)
     doc.page("Sequence decoding","From independent choices to a route")
-    doc.para("A hidden state is a candidate directed arc at one observation. The classifier emission blends log positive-class probability with a Gaussian distance score (weight 0.5, distance scale 8 m). Transitions favour staying on the same arc, then a directed successor; longer hops and U-turns receive lower scores.")
-    doc.para("Viterbi retains the highest cumulative score for each current arc and backtracks from the best final state. A small transition floor allows a path through disconnected candidates. Above a 20-second gap the search admits three extra graph hops.")
+    doc.para(f"A hidden state is a candidate directed arc at one observation. The classifier emission blends log positive-class probability with a Gaussian distance score (weight {cfg['w']:g}, distance scale {cfg['sigma_m']:g} m). Transitions favour staying on the same arc, then a directed successor; longer hops and U-turns receive lower scores.")
+    doc.para(f"Viterbi retains the highest cumulative score for each current arc and backtracks from the best final state. A small transition floor allows a path through disconnected candidates. Above a {cfg['gap_s']:g}-second gap the search admits {cfg['gap_extra_hops']} extra graph hops.")
     doc.table(["Method","Top-1","Continuity","Wrong direction","Trips >=90%"],[[r["method"],pct(r["top1"]),pct(r["route_continuity"]),pct(r["wrong_direction_rate"]),pct(r["trips_ge90_share"])] for r in hmm],[152,75,90,107,91])
     doc.image(figs/"hmm_comparison.png","Student-test comparison from the saved decoder evaluation.",171)
-    doc.para("The main classifier-HMM reached at least 90% point accuracy on eight of ten trips. Connectivity increased from 93.379% to 98.021%. Continuity alone cannot verify a correct road choice; a path can follow the wrong parallel road consistently.")
+    doc.para(f'The main classifier-HMM reached at least 90% point accuracy on {n90} of {n_trips} trips. Connectivity moved from {pct(clf["route_continuity"])} (classifier only) to {pct(main_hmm["route_continuity"])}. The separately tuned distance-only HMM reached {pct(dist_hmm["top1"])} Top-1 and {pct(dist_hmm["route_continuity"])} continuity. Continuity alone cannot verify a correct road choice; a path can follow the wrong parallel road consistently.')
     doc.page("Deployment","Browser and API rehearsal")
-    runs=records(ROOT/"report/rehearsal.csv")
-    doc.para(f'The real browser selected each of {len(runs)} student-test trips and rendered {sum(int(r["n_points"]) for r in runs):,} observations in total. Both services ran on one host using separate HTTP origins. The rehearsal exercised health, trip discovery, POST preflight, prediction, route rendering and aggregate scoring.')
+    doc.para(f'A client on one host (report/rehearse.py) requested each of {len(runs)} student-test trips from the running API ({sum(int(r["n_points"]) for r in runs):,} observations in total, model version {version}). It exercised health, trip discovery, the CORS preflight from the UI origin, prediction and aggregate scoring. Browser screenshots and the physical two-laptop run are captured separately.')
     doc.table(["Student trip","Observations","Accuracy","Continuity","Server ms"],[[r["trip_id"],r["n_points"],pct(r["accuracy"]),pct(r["route_continuity"]),f'{float(r["latency_ms"]):.0f}'] for r in runs],[110,110,100,100,95])
     doc.para("Laptop 1 runs scripts/start_api.ps1. Laptop 2 runs scripts/start_ui.ps1 with the API address on the shared LAN. The browser sends only the selected trip ID. The server performs prediction first, then reads its local reference to calculate the two scores.")
     doc.para("The physical two-laptop demonstration still requires matching UI and receiving-terminal screenshots from the same request. For a rehearsal, serve student_test; reserve eval_test for the evaluator. A local rehearsal cannot validate LAN reachability.")
-    doc.para("Evidence: report/rehearsal.csv, report/rehearsal.log, results/model_comparison.csv, results/tuning_comparison.csv, results/hmm_results.csv, results/hmm_per_trip.csv and artifacts/best_params.json.",size=9)
-    doc.image(ROOT/"report/screenshots/rehearsal-results.png","Browser result panel from the same local request for trip 00000007.",62)
+    doc.para("Evidence: report/rehearsal.csv, report/rehearsal.log (python -m report.rehearse), results/model_comparison.csv, results/tuning_comparison.csv, results/hmm_results.csv, results/hmm_per_trip.csv and artifacts/best_params.json.",size=9)
     if evidence:
         doc.page("Geographical inspection","Student-test comparison map")
         doc.image(evidence/"folium-submission.png","Folium view: grey road graph, blue GPS observations, green reference, dashed amber classifier and red HMM. Road geometry is supplied by the trip.",335)
