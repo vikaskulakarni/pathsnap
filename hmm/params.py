@@ -6,12 +6,13 @@ from pathlib import Path
 from common.config import ARTIFACTS
 
 CONFIG_PATH = ARTIFACTS / "hmm_config.json"
+BASELINE_CONFIG_PATH = ARTIFACTS / "hmm_config_distance.json"  # distance-only baseline (w = 0)
 
 DEFAULT_PARAMS = {
     "w": 0.5,                  # emission: weight of the classifier log-prob vs the distance term
     "sigma_m": 8.0,            # emission: GPS noise std in metres
     "heading_sigma_deg": 45.0,  # emission: std of the heading mismatch (heading variant only)
-    "heading_weight": 1.0,      # emission: weight of the heading term (heading variant only)
+    "heading_weight": 0.0,      # emission: weight of the heading term (distance+heading variant only; 0 = off)
     "same": 0.60,               # transition: stay on the same arc
     "succ": 0.30,               # transition: move to a directed successor arc (1 hop)
     "hop2": 0.05,               # transition: 2 hops ahead
