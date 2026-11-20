@@ -237,7 +237,7 @@ The [earlier Phase 1 implementation](https://github.com/vikaskulakarni/pathsnap/
 
 ## AI-assistance statement
 
-`<Fill in, as required by the event policy, how AI tools were used in this project.>`
+check in AI_USAGE.md
 
 ## Technical report
 
